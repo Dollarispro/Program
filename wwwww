@@ -1,0 +1,2547 @@
+Imports System
+Imports System.ComponentModel
+Imports System.Drawing
+Imports System.Linq
+Imports System.Runtime.InteropServices
+Imports System.Text
+Imports System.Threading
+Imports System.Timers
+Imports System.Windows.Forms
+Imports XRPCLib
+Imports XRPCPlusPlus
+
+Namespace HaxCar_Free
+    Public Class Form1
+        Inherits Form
+        ' Methods
+        Public Sub New()
+            Me.InitializeComponent
+        End Sub
+
+        Private Sub Auto_Elapsed(ByVal sender As Object, ByVal e As ElapsedEventArgs)
+            Me.Console.Call(&H8242D730, New Object() { -1, 0, ("; """ & Me.textBox9.Text & """") })
+            Me.Console.Call(&H8242D730, New Object() { -1, 0, ("< """ & Me.textBox10.Text & """") })
+        End Sub
+
+        Private Sub autoEditToolStripMenuItem_Click(ByVal sender As Object, ByVal e As EventArgs)
+            MessageBox.Show("Not implemented yet.")
+        End Sub
+
+        Public Function Bo2Buttons(ByVal Client As Integer) As Integer
+            Return BitConverter.ToInt32(Me.Console.GetMemory((Me.getPlayerState(Client) + &H568C), 4), 0)
+        End Function
+
+        Private Sub button1_Click_1(ByVal sender As Object, ByVal e As EventArgs)
+            Me.Console.Connect
+            If Me.Console.activeConnection Then
+                MessageBox.Show("Connected", "FiFA")
+            End If
+        End Sub
+
+        Private Sub button10_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.Console.SetMemory((Me.getPlayerState(Me.listBox1.SelectedIndex) + &H5534), Encoding.ASCII.GetBytes(Me.textBox2.Text))
+        End Sub
+
+        Private Sub button11_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.Console.SetMemory((Me.getPlayerState(Me.listBox1.SelectedIndex) + &H55A0), Encoding.ASCII.GetBytes(Me.textBox3.Text))
+        End Sub
+
+        Private Sub button12_Click(ByVal sender As Object, ByVal e As EventArgs)
+            If (BitConverter.ToInt32(Me.Console.GetMemory((Me.getGentity(Me.listBox1.SelectedIndex) + &H1A9), 4), 0) <> 0) Then
+                If Not Me.StealthMode Then
+                    Me.Console.Call(&H8242D730, New Object() { Me.listBox1.SelectedIndex, 0, "; ""^3God Mode: ^2On""" })
+                End If
+                Me.Console.SetMemory((Me.getGentity(Me.listBox1.SelectedIndex) + &H1A9), BitConverter.GetBytes(0))
+            Else
+                If Not Me.StealthMode Then
+                    Me.Console.Call(&H8242D730, New Object() { Me.listBox1.SelectedIndex, 0, "; ""^3God Mode: ^1Off""" })
+                End If
+                Dim bytes As Byte() = BitConverter.GetBytes(&H6400)
+                Array.Reverse(bytes)
+                Me.Console.SetMemory((Me.getGentity(Me.listBox1.SelectedIndex) + &H1A9), bytes)
+            End If
+        End Sub
+
+        Private Sub button13_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.Console.Call(&H8242D730, New Object() { Me.listBox1.SelectedIndex, 0, Me.textBox1.Text })
+        End Sub
+
+        Private Sub button14_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.Console.Call(&H823FF408, New Object() { 0, Me.textBox4.Text })
+        End Sub
+
+        Private Sub button15_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.numericUpDown1.Value = CDec(Me.Console.ReadFloat((Me.getPlayerState(Me.listBox1.SelectedIndex) + 40)))
+            Me.numericUpDown2.Value = CDec(Me.Console.ReadFloat((Me.getPlayerState(Me.listBox1.SelectedIndex) + &H2C)))
+            Me.numericUpDown3.Value = CDec(Me.Console.ReadFloat((Me.getPlayerState(Me.listBox1.SelectedIndex) + &H30)))
+        End Sub
+
+        Private Sub button16_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.Console.WriteFloat((Me.getPlayerState(Me.listBox1.SelectedIndex) + 40), CSng(Me.numericUpDown1.Value))
+            Me.Console.WriteFloat((Me.getPlayerState(Me.listBox1.SelectedIndex) + &H2C), CSng(Me.numericUpDown2.Value))
+            Me.Console.WriteFloat((Me.getPlayerState(Me.listBox1.SelectedIndex) + &H30), CSng(Me.numericUpDown3.Value))
+        End Sub
+
+        Private Sub button17_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Dim buffer As Byte() = New Byte(4  - 1) {}
+            Dim i As Integer
+            For i = 0 To &H12 - 1
+                If (i <> Me.listBox1.SelectedIndex) Then
+                    Me.Console.WriteFloat((Me.getPlayerState(i) + 40), CSng(Me.numericUpDown1.Value))
+                    Me.Console.WriteFloat((Me.getPlayerState(i) + &H2C), CSng(Me.numericUpDown2.Value))
+                    Me.Console.WriteFloat((Me.getPlayerState(i) + &H30), CSng(Me.numericUpDown3.Value))
+                End If
+            Next i
+        End Sub
+
+        Private Sub button18_Click(ByVal sender As Object, ByVal e As EventArgs)
+            If (((Me.Console.ReadInt32((Me.getPlayerState(Me.listBox1.SelectedIndex) + &H5687)) And &H60) <> &H60) OrElse ((Me.Console.ReadInt32((Me.getPlayerState(Me.listBox1.SelectedIndex) + &H5687)) And &H70) <> &H70)) Then
+                Me.Console.SetMemory((Me.getPlayerState(Me.listBox1.SelectedIndex) + &H5687), New Byte() { 60 })
+                If Not Me.StealthMode Then
+                    Me.Console.Call(&H8242D730, New Object() { Me.listBox1.SelectedIndex, 0, "; ""^3Movement: ^1Off""" })
+                End If
+            Else
+                Me.Console.WriteInt32((Me.getPlayerState(Me.listBox1.SelectedIndex) + &H5687), &H358)
+                If Not Me.StealthMode Then
+                    Me.Console.Call(&H8242D730, New Object() { Me.listBox1.SelectedIndex, 0, "; ""^3Movement: ^2On""" })
+                End If
+            End If
+        End Sub
+
+        Private Sub button19_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Dim i As Integer
+            For i = 0 To &H12 - 1
+                Me.NewsbarShader(i) = Me.Console.Call(HElems.elem, New Object() { i })
+                Me.NewsbarText(i) = Me.Console.Call(HElems.elem, New Object() { i })
+            Next i
+            Me.NewsText = Me.createText(Me.textBox6.Text)
+            Me.NewsBar.Interval = 10
+            Me.NewsBar.Enabled = True
+            AddHandler Me.NewsBar.Elapsed, New ElapsedEventHandler(AddressOf Me.NewsBar_Elapsed)
+            Me.NewsBar.Start
+        End Sub
+
+        Private Sub button2_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.listBox1.Items.Clear
+            Dim i As Integer
+            For i = 0 To &H12 - 1
+                Me.listBox1.Items.Add(Me.getGamertag(i))
+            Next i
+        End Sub
+
+        Private Sub button20_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.Console.SetMemory(&H82001630, New Byte() { &HFF, &HFF, &HFF, &HFF })
+        End Sub
+
+        Private Sub button21_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Dim bytes As Byte() = BitConverter.GetBytes(Convert.ToSingle(Me.textBox5.Text))
+            Array.Reverse(bytes)
+            Me.Console.SetMemory(&H82084564, bytes)
+        End Sub
+
+        Private Sub button22_Click(ByVal sender As Object, ByVal e As EventArgs)
+            If Not Me.StealthMode Then
+                Me.Console.Call(&H8242D730, New Object() { Me.listBox1.SelectedIndex, 0, "; ""^3FOV""" })
+            End If
+            Me.Console.Call(&H8242D730, New Object() { Me.listBox1.SelectedIndex, 0, "^ 5 95" })
+        End Sub
+
+        Private Sub button23_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Dim array As Byte() = New Byte(4  - 1) {}
+            array = BitConverter.GetBytes(&H1869F)
+            Array.Reverse(array)
+            Me.Console.SetMemory((Me.getPlayerState(Me.listBox1.SelectedIndex) + &H55C8), array)
+        End Sub
+
+        Private Sub button24_Click(ByVal sender As Object, ByVal e As EventArgs)
+            If (BitConverter.ToInt32(Me.Console.GetMemory((Me.getGentity(Me.listBox1.SelectedIndex) + &H11C), 4), 0) = 0) Then
+                If Not Me.StealthMode Then
+                    Me.Console.Call(&H8242D730, New Object() { Me.listBox1.SelectedIndex, 0, "; ""^3Invsblity: ^1Off""" })
+                End If
+                Me.Console.SetMemory((Me.getPlayerState(Me.listBox1.SelectedIndex) + &HFC), New Byte(4  - 1) {})
+                Me.Console.SetMemory((Me.getGentity(Me.listBox1.SelectedIndex) + &H11C), New Byte(4  - 1) {})
+            Else
+                If Not Me.StealthMode Then
+                    Me.Console.Call(&H8242D730, New Object() { Me.listBox1.SelectedIndex, 0, "; ""^3Invsblity: ^2On""" })
+                End If
+                Dim data As Byte() = New Byte(4  - 1) {}
+                data(3) = &H20
+                Me.Console.SetMemory((Me.getPlayerState(Me.listBox1.SelectedIndex) + &HFC), data)
+                Me.Console.SetMemory((Me.getGentity(Me.listBox1.SelectedIndex) + &H11C), New Byte(4  - 1) {})
+            End If
+        End Sub
+
+        Private Sub button25_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.GiveWeapon(Me.listBox1.SelectedIndex, Me.comboBox1.SelectedItem.ToString, 0, 0)
+        End Sub
+
+        Private Sub button26_Click(ByVal sender As Object, ByVal e As EventArgs)
+            If (Me.Console.ReadUInt32(&H826B99B0) <> &H60000000) Then
+                Me.QuickNop(&H826B99B0)
+            Else
+                Me.Console.WriteUInt32(&H826B99B0, &H90E30000)
+            End If
+        End Sub
+
+        Private Sub button27_Click(ByVal sender As Object, ByVal e As EventArgs)
+            If (Me.Console.ReadInt32(&H823215C0) <> &H60000000) Then
+                Me.QuickNop(&H823215C0)
+            Else
+                Me.Console.WriteUInt32(&H823215C0, &H911F01A8)
+            End If
+        End Sub
+
+        Private Sub button28_Click(ByVal sender As Object, ByVal e As EventArgs)
+            If Me.checkBox3.Checked Then
+                Dim num As UInt32 = &H8433AFF8
+                Me.numericUpDown4.Value = Me.Console.ReadInt32((num + &H7DC))
+                Me.numericUpDown5.Value = Me.Console.ReadInt32((num + &H7EE))
+                Me.numericUpDown6.Value = Me.Console.ReadInt32((num + &H818))
+                Me.numericUpDown7.Value = Me.Console.ReadInt32((num + &H338))
+                Me.numericUpDown8.Value = Me.Console.ReadInt32((num + &H10A))
+                Me.numericUpDown9.Value = Me.Console.ReadInt32((num + &H91A))
+                Me.numericUpDown10.Value = Me.Console.ReadInt32((num + &HC0E))
+                Me.numericUpDown11.Value = Me.Console.ReadInt32((num + &H620))
+                Me.numericUpDown12.Value = Me.Console.ReadInt32((num + &H8D2))
+            End If
+        End Sub
+
+        Private Sub button29_Click(ByVal sender As Object, ByVal e As EventArgs)
+            If Me.checkBox3.Checked Then
+                Dim num As UInt32 = &H8433AFF8
+                Dim array As Byte() = New Byte(4  - 1) {}
+                array = BitConverter.GetBytes(CInt(Me.numericUpDown4.Value))
+                Array.Reverse(array)
+                Me.Console.SetMemory((num + &H7DC), array)
+                Me.Console.WriteInt32((num + &H7DC), CInt(Me.numericUpDown4.Value))
+                array = BitConverter.GetBytes(CInt(Me.numericUpDown5.Value))
+                Array.Reverse(array)
+                Me.Console.SetMemory((num + &H7EE), array)
+                Me.Console.WriteInt32((num + &H7EE), CInt(Me.numericUpDown5.Value))
+                array = BitConverter.GetBytes(CInt(Me.numericUpDown6.Value))
+                Array.Reverse(array)
+                Me.Console.SetMemory((num + &H818), array)
+                array = BitConverter.GetBytes(CInt(Me.numericUpDown7.Value))
+                Array.Reverse(array)
+                Me.Console.SetMemory((num + &H338), array)
+                array = BitConverter.GetBytes(CInt(Me.numericUpDown8.Value))
+                Array.Reverse(array)
+                Me.Console.SetMemory((num + &H10A), array)
+                array = BitConverter.GetBytes(CInt(Me.numericUpDown9.Value))
+                Array.Reverse(array)
+                Me.Console.SetMemory((num + &H91A), array)
+                array = BitConverter.GetBytes(CInt(Me.numericUpDown10.Value))
+                Array.Reverse(array)
+                Me.Console.SetMemory((num + &HC0E), array)
+                array = BitConverter.GetBytes(CInt(Me.numericUpDown11.Value))
+                Array.Reverse(array)
+                Me.Console.SetMemory((num + &H620), array)
+                array = BitConverter.GetBytes(CInt(Me.numericUpDown12.Value))
+                Array.Reverse(array)
+                Me.Console.SetMemory((num + &H8D2), array)
+            End If
+        End Sub
+
+        Private Sub button3_Click(ByVal sender As Object, ByVal e As EventArgs)
+            If Not Me.StealthMode Then
+                Me.Console.Call(&H8242D730, New Object() { Me.listBox1.SelectedIndex, 0, "; ""^3Max Ammo""" })
+            End If
+            Me.MaxAmmo(Me.listBox1.SelectedIndex)
+        End Sub
+
+        Private Sub button30_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.Console.Call(&H823FF408, New Object() { 0, "set party_minplayers 1;set party_gameStartTimerLength 0.1;set party_pregameStartTimerLength 0.1;set party_connectToOthers 0" })
+        End Sub
+
+        Private Sub button31_Click(ByVal sender As Object, ByVal e As EventArgs)
+            MessageBox.Show(Me.Console.Call(&H82491DD0, New Object() { "cl_ingame" }).ToString)
+        End Sub
+
+        Private Sub button31_Click_1(ByVal sender As Object, ByVal e As EventArgs)
+            If (((Me.Console.ReadInt32(&H82495778) = &H60000000) AndAlso (Me.Console.ReadInt32(&H82495790) = &H60000000)) AndAlso (Me.Console.ReadInt32(&H824957A8) = &H60000000)) Then
+                Me.Cheater
+            Else
+                MessageBox.Show("Error", "You need to remove cheat protection.")
+            End If
+        End Sub
+
+        Private Sub button32_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.NewsBar.Stop
+            Me.setText(Me.NewsClient, Me.NewsbarText(Me.NewsClient), 0, 1, 2!, Me.fontSize, 0!, &H9A, 5, 0, 0, 0, 0)
+        End Sub
+
+        Private Sub button35_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.DoHeart.Stop
+            Dim i As Integer
+            For i = 0 To &H12 - 1
+                Me.setText(i, Me.DoHearText(i), 0, 1, 2!, 200!, 200!, 1, 5, &HFF, 0, 0, &HFF)
+            Next i
+        End Sub
+
+        Private Sub button36_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Dim i As Integer
+            For i = 0 To &H12 - 1
+                Me.DoHearText(i) = Me.Console.Call(HElems.elem, New Object() { i })
+            Next i
+            Me.DoText = Me.createText(Me.textBox8.Text)
+            Me.DoHeart.Interval = 1000
+            Me.DoHeart.Enabled = True
+            AddHandler Me.DoHeart.Elapsed, New ElapsedEventHandler(AddressOf Me.DoHeart_Elapsed)
+            Me.DoHeart.Start
+        End Sub
+
+        Private Sub button37_Click_1(ByVal sender As Object, ByVal e As EventArgs)
+            Me.GiveWeapon(Me.listBox1.SelectedIndex, "minigun_alcatraz_upgraded_zm", 0, 0)
+        End Sub
+
+        Private Sub button38_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.GiveWeapon(Me.listBox1.SelectedIndex, "lightning_hands_zm", 0, 0)
+        End Sub
+
+        Private Sub button39_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.GiveWeapon(Me.listBox1.SelectedIndex, "blundergat_upgraded_zm", 0, 0)
+        End Sub
+
+        Private Sub button4_Click(ByVal sender As Object, ByVal e As EventArgs)
+            If Not Me.StealthMode Then
+                Me.Console.Call(&H8242D730, New Object() { Me.listBox1.SelectedIndex, 0, "; ""^3Ammo Taken""" })
+            End If
+            Me.TakeAmmo(Me.listBox1.SelectedIndex)
+        End Sub
+
+        Private Sub button40_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.GiveWeapon(Me.listBox1.SelectedIndex, "ak47_upgraded_zm", 0, 0)
+        End Sub
+
+        Private Sub button41_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.GiveWeapon(Me.listBox1.SelectedIndex, "pdw57_upgraded_zm", 0, 0)
+        End Sub
+
+        Private Sub button42_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.GiveWeapon(Me.listBox1.SelectedIndex, "upgraded_tomahawk_zm", 0, 0)
+        End Sub
+
+        Private Sub button43_Click(ByVal sender As Object, ByVal e As EventArgs)
+        End Sub
+
+        Private Sub button44_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.Auto.Interval = 500
+            Me.Auto.Enabled = True
+            AddHandler Me.Auto.Elapsed, New ElapsedEventHandler(AddressOf Me.Auto_Elapsed)
+            Me.Auto.Start
+        End Sub
+
+        Private Sub button45_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.Auto.Stop
+        End Sub
+
+        Private Sub button46_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.Console.Call(&H823FF408, New Object() { 0, ("tempban " & Me.listBox1.Text) })
+        End Sub
+
+        Private Sub button47_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.QuickNop(&H82596838)
+            Me.QuickNop(&H822D405C)
+            Me.QuickNop(&H825D9A9C)
+            Me.QuickNop(&H822D0A08)
+        End Sub
+
+        Private Sub button48_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.QuickNop(&H822AC694)
+        End Sub
+
+        Private Sub button49_Click(ByVal sender As Object, ByVal e As EventArgs)
+            MessageBox.Show("FiFA", "Takes a while cause I use a for loop cause I'm lazy.")
+            Dim i As Integer
+            For i = &H3876 To &H3C5E - 1
+                Me.Console.SetMemory(DirectCast(i, UInt32), New Byte() { &HFF })
+                Thread.Sleep(10)
+            Next i
+        End Sub
+
+        Private Sub button5_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Dim data As Byte() = New Byte(4  - 1) {}
+            data(0) = &H38
+            data(1) = &H60
+            Me.Console.SetMemory(&H821B8E04, data)
+        End Sub
+
+        Private Sub button50_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.Console.Call(&H823FF408, New Object() { 0, ("ban " & Me.listBox1.Text) })
+        End Sub
+
+        Private Sub button6_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.QuickNop(&H8244D0CC)
+            Me.QuickNop(&H8244D0A8)
+            Me.QuickNop(&H822827F0)
+            Me.QuickNop(&H82282824)
+            Me.QuickNop(&H8244D184)
+        End Sub
+
+        Private Sub button7_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.QuickNop(&H82495778)
+            Me.QuickNop(&H82495790)
+            Me.QuickNop(&H824957A8)
+            Me.Console.Call(&H823FF408, New Object() { 0, "set cg_drawThroughWalls 1;set ui_hud_hardcore 0;set scr_hardcore 0" })
+        End Sub
+
+        Private Sub button8_Click(ByVal sender As Object, ByVal e As EventArgs)
+            If Not Me.StealthMode Then
+                Me.Console.Call(&H8242D730, New Object() { Me.listBox1.SelectedIndex, 0, "; ""^3Killstreaks Given""" })
+            End If
+            Me.GiveKillStreaks(Me.listBox1.SelectedIndex)
+        End Sub
+
+        Private Sub button9_Click_1(ByVal sender As Object, ByVal e As EventArgs)
+            If Not Me.infared(Me.listBox1.SelectedIndex) Then
+                Me.Console.Call(&H8242D730, New Object() { Me.listBox1.SelectedIndex, 0, "2 1060 ""infrared"" 3000" })
+                If Not Me.StealthMode Then
+                    Me.Console.Call(&H8242D730, New Object() { Me.listBox1.SelectedIndex, 0, "; ""Infared: ^2On""" })
+                End If
+                Me.infared(Me.listBox1.SelectedIndex) = True
+            Else
+                Me.Console.Call(&H8242D730, New Object() { Me.listBox1.SelectedIndex, 0, "2 1060 ""default"" 3000" })
+                If Not Me.StealthMode Then
+                    Me.Console.Call(&H8242D730, New Object() { Me.listBox1.SelectedIndex, 0, "; ""Infared: ^1Off""" })
+                End If
+                Me.infared(Me.listBox1.SelectedIndex) = False
+            End If
+        End Sub
+
+        Public Sub Cheater()
+            Me.Console.Call(&H823FF408, New Object() { 0, "set bg_bobMax 0;set bg_weaponBobMax 0;set player_breath_hold_time 999;set cg_overheadNamesGlow 1 0 1 1;set cg_overheadNamesSize 2;set cg_overheadNamesMaxDist 999;set cg_overheadNamesNearDist 999;set cg_enemyNameFadeIn 0.1;set cg_enemyNameFadeOut 99999;set cg_drawThroughWalls 1;set compassMaxRange 5000;set compassShowEnemies 1;set lowAmmoWarningColor1 0 1 1 1;set lowAmmoWarningColor2 0 0 1 1;set lowAmmoWarningNoReloadColor1 1 0 1 1;set lowAmmoWarningNoReloadColor2 0 1 0 1;set player_breath_gasp_time 0;set player_breath_gasp_lerp 0;set perk_weapSwitchMultiplier 0.1;set perk_weapSpreadMultiplier 0.1;set perk_weapReloadMultiplier 0.1;set perk_weapRateMultiplier 0.1;set perk_weapAdsMultiplier 0.1;set perk_weapMeleeMultiplier 0.1;set perk_weapTossMultiplier 0.1;set perk_weapEquipmentUseMultiplier 0.1;set perk_bulletPenetrationMultiplier 0.1;set perk_killstreakReduction 999" })
+        End Sub
+
+        Private Sub checkBox1_CheckedChanged(ByVal sender As Object, ByVal e As EventArgs)
+            Me.SelectedClient = Me.listBox1.SelectedIndex
+            If Me.checkBox1.Checked Then
+                Me.TP.Interval = 2500
+                Me.TP.Enabled = True
+                AddHandler Me.TP.Elapsed, New ElapsedEventHandler(AddressOf Me.TP_Elapsed)
+                Me.TP.Start
+            Else
+                Me.TP.Stop
+            End If
+        End Sub
+
+        Private Sub checkBox2_CheckedChanged(ByVal sender As Object, ByVal e As EventArgs)
+            If (((Me.Console.ReadInt32(&H82495778) = &H60000000) AndAlso (Me.Console.ReadInt32(&H82495790) = &H60000000)) AndAlso (Me.Console.ReadInt32(&H824957A8) = &H60000000)) Then
+                If Me.checkBox2.Checked Then
+                    Me.Clantag.Interval = 10000
+                    Me.Clantag.Enabled = True
+                    AddHandler Me.Clantag.Elapsed, New ElapsedEventHandler(AddressOf Me.Clantag_Elapsed)
+                    Me.Clantag.Start
+                Else
+                    Me.Clantag.Stop
+                End If
+            Else
+                MessageBox.Show("Error", "You need to remove cheat protection.")
+                If Me.checkBox2.Checked Then
+                    Me.checkBox2.Checked = False
+                End If
+            End If
+        End Sub
+
+        Private Sub checkBox3_CheckedChanged(ByVal sender As Object, ByVal e As EventArgs)
+            If Me.checkBox3.Checked Then
+                Me.numericUpDown4.Enabled = True
+                Me.numericUpDown5.Enabled = True
+                Me.numericUpDown6.Enabled = True
+                Me.numericUpDown7.Enabled = True
+                Me.numericUpDown8.Enabled = True
+                Me.numericUpDown9.Enabled = True
+                Me.numericUpDown10.Enabled = True
+                Me.numericUpDown11.Enabled = True
+                Me.numericUpDown12.Enabled = True
+                Me.button49.Enabled = True
+            Else
+                Me.numericUpDown4.Enabled = False
+                Me.numericUpDown5.Enabled = False
+                Me.numericUpDown6.Enabled = False
+                Me.numericUpDown7.Enabled = False
+                Me.numericUpDown8.Enabled = False
+                Me.numericUpDown9.Enabled = False
+                Me.numericUpDown10.Enabled = False
+                Me.numericUpDown11.Enabled = False
+                Me.numericUpDown12.Enabled = False
+                Me.button49.Enabled = False
+            End If
+        End Sub
+
+        Private Sub Clantag_Elapsed(ByVal sender As Object, ByVal e As ElapsedEventArgs)
+            Me.Cheater
+        End Sub
+
+        Private Sub contextMenuStrip1_Opening(ByVal sender As Object, ByVal e As CancelEventArgs)
+        End Sub
+
+        Public Function createText(ByVal [text] As String) As UInt32
+            Return Me.Console.Call(HElems.locString, New Object() { [text] })
+        End Function
+
+        Private Sub Derpingtest()
+        End Sub
+
+        Private Sub devModeToolStripMenuItem_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Do While (MyBase.Height <= 500)
+                MyBase.Height += 1
+            Loop
+        End Sub
+
+        Private Sub disableWeaponsToolStripMenuItem_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.Console.WriteInt32((Me.getPlayerState(Me.listBox1.SelectedIndex) + &H10), &H81)
+            If Not Me.StealthMode Then
+                Me.Console.Call(&H8242D730, New Object() { Me.listBox1.SelectedIndex, 0, "; ""^3Weapons: ^1Off""" })
+            End If
+        End Sub
+
+        Protected Overrides Sub Dispose(ByVal disposing As Boolean)
+            If (disposing AndAlso (Not Me.components Is Nothing)) Then
+                Me.components.Dispose
+            End If
+            MyBase.Dispose(disposing)
+        End Sub
+
+        Private Sub DoHeart_Elapsed(ByVal sender As Object, ByVal e As ElapsedEventArgs)
+            If (Me.HeartClient > &H11) Then
+                Me.HeartClient = 0
+            End If
+            Me.setText(Me.HeartClient, Me.DoHearText(Me.HeartClient), Me.DoText, 1, 2!, 0!, 0!, 120, 5, &HFF, 0, 0, &HFF)
+            Me.HeartClient += 1
+        End Sub
+
+        Private Sub enableWeaponsToolStripMenuItem_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.Console.WriteInt32((Me.getPlayerState(Me.listBox1.SelectedIndex) + &H10), 0)
+            If Not Me.StealthMode Then
+                Me.Console.Call(&H8242D730, New Object() { Me.listBox1.SelectedIndex, 0, "; ""^3Weapons: ^2On""" })
+            End If
+        End Sub
+
+        Private Sub exitToolStripMenuItem_Click(ByVal sender As Object, ByVal e As EventArgs)
+            MyBase.Close
+        End Sub
+
+        Private Sub Form1_Closing(ByVal sender As Object, ByVal e As CancelEventArgs)
+            Me.Console.xbCon.DebugTarget.DisconnectAsDebugger
+        End Sub
+
+        Private Sub Form1_Load(ByVal sender As Object, ByVal e As EventArgs)
+            MyBase.Height = &H191
+        End Sub
+
+        Public Sub FreezePlayer(ByVal Client As Integer)
+            Me.Console.SetMemory((Me.getPlayerState(Client) + &H5687), New Byte() { 60 })
+        End Sub
+
+        Private Sub freezeToolStripMenuItem_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.FreezePlayer(Me.listBox1.SelectedIndex)
+            If Not Me.StealthMode Then
+                Me.Console.Call(&H8242D730, New Object() { Me.listBox1.SelectedIndex, 0, "; ""^3mFlag: ^7Froze""" })
+            End If
+        End Sub
+
+        Private Sub freezeWithLookToolStripMenuItem_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.Console.AND_UInt32((Me.getPlayerState(Me.listBox1.SelectedIndex) + &H5684), 120)
+            If Not Me.StealthMode Then
+                Me.Console.Call(&H8242D730, New Object() { Me.listBox1.SelectedIndex, 0, "; ""^3mFlag: ^7Froze with look""" })
+            End If
+        End Sub
+
+        Public Function getGamertag(ByVal Client As Integer) As String
+            Dim memory As Byte() = Me.Console.GetMemory((Me.getPlayerState(Client) + &H5534), 20)
+            memory.Reverse(Of Byte)()
+            Return Encoding.ASCII.GetString(memory)
+        End Function
+
+        Public Function getGentity(ByVal Client As Integer) As UInt32
+            Return DirectCast((&H833BF7C0 + (Client * &H31C)), UInt32)
+        End Function
+
+        Public Function getMaterialIndex(ByVal material As String) As UInt32
+            Return Me.Console.Call(HElems.material, New Object() { material })
+        End Function
+
+        Public Function getPlayerIndexForName(ByVal Name As String) As Integer
+            Dim i As Integer
+            For i = 0 To &H12 - 1
+                If Me.getGamertag(i).Contains(Name) Then
+                    Return i
+                End If
+            Next i
+            Return 0
+        End Function
+
+        Public Function getPlayerState(ByVal Client As Integer) As UInt32
+            Return DirectCast((-2091630192 + (Client * &H57F8)), UInt32)
+        End Function
+
+        Public Function GetStringTableName(ByVal index As Integer) As String
+            Return (Me.Console.ReadString(Me.Console.ReadUInt32(DirectCast((-2104040836 + (index * &H12)), UInt32))) & ChrW(10))
+        End Function
+
+        Public Sub GiveKillStreaks(ByVal Client As Integer)
+            Me.Console.SetMemory((Me.getPlayerState(Client) + &H437), New Byte() { 1 })
+            Me.Console.SetMemory((Me.getPlayerState(Client) + &H432), New Byte() { 1 })
+            Me.Console.SetMemory((Me.getPlayerState(Client) + &H42E), New Byte() { 1 })
+        End Sub
+
+        Public Sub GiveWeapon(ByVal Client As Integer, ByVal WeaponName As String, ByVal Akimbo As Integer, ByVal Camo As Integer)
+            Dim num As Integer = CInt(Me.Console.Call(&H823A9DC8, New Object() { WeaponName }))
+            Me.Console.Call(&H823AB060, New Object() { Me.getPlayerState(Client), num, Akimbo, Camo })
+            Dim str As String = ("h " & num.ToString)
+            Me.Console.Call(&H8242D730, New Object() { Client, 1, str })
+            Me.Console.Call(&H82310CE8, New Object() { Me.getGentity(Client), num, 0, &H3E7, 1 })
+        End Sub
+
+        Private Sub InitializeComponent()
+            Me.components = New Container
+            Dim manager As New ComponentResourceManager(GetType(Form1))
+            Me.listBox1 = New ListBox
+            Me.contextMenuStrip1 = New ContextMenuStrip(Me.components)
+            Me.item1ToolStripMenuItem = New ToolStripMenuItem
+            Me.freezeToolStripMenuItem = New ToolStripMenuItem
+            Me.freezeWithLookToolStripMenuItem = New ToolStripMenuItem
+            Me.spreadOverrideToolStripMenuItem = New ToolStripMenuItem
+            Me.onToolStripMenuItem1 = New ToolStripMenuItem
+            Me.offToolStripMenuItem1 = New ToolStripMenuItem
+            Me.weapFlagsToolStripMenuItem = New ToolStripMenuItem
+            Me.enableWeaponsToolStripMenuItem = New ToolStripMenuItem
+            Me.disableWeaponsToolStripMenuItem = New ToolStripMenuItem
+            Me.scoreToolStripMenuItem = New ToolStripMenuItem
+            Me.maxScoreToolStripMenuItem = New ToolStripMenuItem
+            Me.maxKillsToolStripMenuItem = New ToolStripMenuItem
+            Me.maxDeathsToolStripMenuItem = New ToolStripMenuItem
+            Me.camoToolStripMenuItem = New ToolStripMenuItem
+            Me.devGruToolStripMenuItem = New ToolStripMenuItem
+            Me.aTacsAUToolStripMenuItem = New ToolStripMenuItem
+            Me.eRDLToolStripMenuItem = New ToolStripMenuItem
+            Me.siberiaToolStripMenuItem = New ToolStripMenuItem
+            Me.chocoToolStripMenuItem = New ToolStripMenuItem
+            Me.blueTigerToolStripMenuItem = New ToolStripMenuItem
+            Me.bloodshotToolStripMenuItem = New ToolStripMenuItem
+            Me.ghostexToolStripMenuItem = New ToolStripMenuItem
+            Me.kryptekToolStripMenuItem = New ToolStripMenuItem
+            Me.carbonFiberToolStripMenuItem = New ToolStripMenuItem
+            Me.cherryToolStripMenuItem = New ToolStripMenuItem
+            Me.artOfWarToolStripMenuItem = New ToolStripMenuItem
+            Me.roninToolStripMenuItem = New ToolStripMenuItem
+            Me.skullsToolStripMenuItem = New ToolStripMenuItem
+            Me.goldToolStripMenuItem = New ToolStripMenuItem
+            Me.diamondToolStripMenuItem = New ToolStripMenuItem
+            Me.digitalToolStripMenuItem = New ToolStripMenuItem
+            Me.eliteToolStripMenuItem = New ToolStripMenuItem
+            Me.jungleToolStripMenuItem = New ToolStripMenuItem
+            Me.moneyToolStripMenuItem = New ToolStripMenuItem
+            Me.moveSpeedScaleToolStripMenuItem = New ToolStripMenuItem
+            Me.noneToolStripMenuItem = New ToolStripMenuItem
+            Me.mediumToolStripMenuItem = New ToolStripMenuItem
+            Me.highToolStripMenuItem = New ToolStripMenuItem
+            Me.button1 = New Button
+            Me.button2 = New Button
+            Me.menuStrip1 = New MenuStrip
+            Me.toolStripMenuItem1 = New ToolStripMenuItem
+            Me.settingsToolStripMenuItem = New ToolStripMenuItem
+            Me.stealthModeToolStripMenuItem = New ToolStripMenuItem
+            Me.onToolStripMenuItem = New ToolStripMenuItem
+            Me.offToolStripMenuItem = New ToolStripMenuItem
+            Me.autoEditToolStripMenuItem = New ToolStripMenuItem
+            Me.devModeToolStripMenuItem = New ToolStripMenuItem
+            Me.exitToolStripMenuItem = New ToolStripMenuItem
+            Me.versionToolStripMenuItem = New ToolStripMenuItem
+            Me.toolStripMenuItem3 = New ToolStripMenuItem
+            Me.groupBox17 = New GroupBox
+            Me.tabPage6 = New TabPage
+            Me.richTextBox1 = New RichTextBox
+            Me.tabPage5 = New TabPage
+            Me.groupBox2 = New GroupBox
+            Me.button48 = New Button
+            Me.button47 = New Button
+            Me.button7 = New Button
+            Me.button6 = New Button
+            Me.button5 = New Button
+            Me.tabPage7 = New TabPage
+            Me.button43 = New Button
+            Me.groupBox16 = New GroupBox
+            Me.button45 = New Button
+            Me.button44 = New Button
+            Me.textBox10 = New TextBox
+            Me.textBox9 = New TextBox
+            Me.groupBox14 = New GroupBox
+            Me.groupBox15 = New GroupBox
+            Me.button38 = New Button
+            Me.button42 = New Button
+            Me.button41 = New Button
+            Me.button40 = New Button
+            Me.button39 = New Button
+            Me.button37 = New Button
+            Me.groupBox9 = New GroupBox
+            Me.checkBox2 = New CheckBox
+            Me.button31 = New Button
+            Me.tabPage4 = New TabPage
+            Me.groupBox8 = New GroupBox
+            Me.listBox8 = New ListBox
+            Me.listBox7 = New ListBox
+            Me.listBox6 = New ListBox
+            Me.listBox5 = New ListBox
+            Me.listBox4 = New ListBox
+            Me.listBox3 = New ListBox
+            Me.listBox2 = New ListBox
+            Me.label18 = New Label
+            Me.label17 = New Label
+            Me.label16 = New Label
+            Me.label15 = New Label
+            Me.label14 = New Label
+            Me.label13 = New Label
+            Me.label12 = New Label
+            Me.textBox11 = New TextBox
+            Me.label11 = New Label
+            Me.numericUpDown13 = New NumericUpDown
+            Me.label1 = New Label
+            Me.checkBox3 = New CheckBox
+            Me.button49 = New Button
+            Me.label10 = New Label
+            Me.numericUpDown12 = New NumericUpDown
+            Me.label9 = New Label
+            Me.numericUpDown11 = New NumericUpDown
+            Me.label8 = New Label
+            Me.label7 = New Label
+            Me.label6 = New Label
+            Me.label5 = New Label
+            Me.numericUpDown10 = New NumericUpDown
+            Me.numericUpDown9 = New NumericUpDown
+            Me.numericUpDown8 = New NumericUpDown
+            Me.numericUpDown7 = New NumericUpDown
+            Me.label4 = New Label
+            Me.numericUpDown6 = New NumericUpDown
+            Me.label3 = New Label
+            Me.label2 = New Label
+            Me.numericUpDown5 = New NumericUpDown
+            Me.numericUpDown4 = New NumericUpDown
+            Me.button29 = New Button
+            Me.button28 = New Button
+            Me.tabPage3 = New TabPage
+            Me.groupBox10 = New GroupBox
+            Me.groupBox13 = New GroupBox
+            Me.button35 = New Button
+            Me.button36 = New Button
+            Me.textBox8 = New TextBox
+            Me.groupBox12 = New GroupBox
+            Me.button34 = New Button
+            Me.button33 = New Button
+            Me.textBox7 = New TextBox
+            Me.groupBox11 = New GroupBox
+            Me.button32 = New Button
+            Me.button19 = New Button
+            Me.textBox6 = New TextBox
+            Me.tabPage2 = New TabPage
+            Me.groupbox7 = New GroupBox
+            Me.button25 = New Button
+            Me.comboBox1 = New ComboBox
+            Me.groupBox6 = New GroupBox
+            Me.button50 = New Button
+            Me.button46 = New Button
+            Me.button30 = New Button
+            Me.button27 = New Button
+            Me.button26 = New Button
+            Me.button21 = New Button
+            Me.textBox5 = New TextBox
+            Me.button20 = New Button
+            Me.groupBox3 = New GroupBox
+            Me.button14 = New Button
+            Me.textBox4 = New TextBox
+            Me.button13 = New Button
+            Me.textBox1 = New TextBox
+            Me.tabPage1 = New TabPage
+            Me.checkBox1 = New CheckBox
+            Me.groupBox4 = New GroupBox
+            Me.button11 = New Button
+            Me.button10 = New Button
+            Me.textBox3 = New TextBox
+            Me.textBox2 = New TextBox
+            Me.groupBox1 = New GroupBox
+            Me.button24 = New Button
+            Me.button23 = New Button
+            Me.button22 = New Button
+            Me.button18 = New Button
+            Me.groupBox5 = New GroupBox
+            Me.button17 = New Button
+            Me.button16 = New Button
+            Me.button15 = New Button
+            Me.numericUpDown3 = New NumericUpDown
+            Me.numericUpDown2 = New NumericUpDown
+            Me.numericUpDown1 = New NumericUpDown
+            Me.button9 = New Button
+            Me.button12 = New Button
+            Me.button8 = New Button
+            Me.button4 = New Button
+            Me.button3 = New Button
+            Me.tabControl1 = New TabControl
+            Me.contextMenuStrip1.SuspendLayout
+            Me.menuStrip1.SuspendLayout
+            Me.tabPage6.SuspendLayout
+            Me.tabPage5.SuspendLayout
+            Me.groupBox2.SuspendLayout
+            Me.tabPage7.SuspendLayout
+            Me.groupBox16.SuspendLayout
+            Me.groupBox14.SuspendLayout
+            Me.groupBox15.SuspendLayout
+            Me.groupBox9.SuspendLayout
+            Me.tabPage4.SuspendLayout
+            Me.groupBox8.SuspendLayout
+            Me.numericUpDown13.BeginInit
+            Me.numericUpDown12.BeginInit
+            Me.numericUpDown11.BeginInit
+            Me.numericUpDown10.BeginInit
+            Me.numericUpDown9.BeginInit
+            Me.numericUpDown8.BeginInit
+            Me.numericUpDown7.BeginInit
+            Me.numericUpDown6.BeginInit
+            Me.numericUpDown5.BeginInit
+            Me.numericUpDown4.BeginInit
+            Me.tabPage3.SuspendLayout
+            Me.groupBox10.SuspendLayout
+            Me.groupBox13.SuspendLayout
+            Me.groupBox12.SuspendLayout
+            Me.groupBox11.SuspendLayout
+            Me.tabPage2.SuspendLayout
+            Me.groupbox7.SuspendLayout
+            Me.groupBox6.SuspendLayout
+            Me.groupBox3.SuspendLayout
+            Me.tabPage1.SuspendLayout
+            Me.groupBox4.SuspendLayout
+            Me.groupBox1.SuspendLayout
+            Me.groupBox5.SuspendLayout
+            Me.numericUpDown3.BeginInit
+            Me.numericUpDown2.BeginInit
+            Me.numericUpDown1.BeginInit
+            Me.tabControl1.SuspendLayout
+            MyBase.SuspendLayout
+            Me.listBox1.ContextMenuStrip = Me.contextMenuStrip1
+            Me.listBox1.ForeColor = Color.Black
+            Me.listBox1.Location = New Point(12, &H5E)
+            Me.listBox1.Name = "listBox1"
+            Me.listBox1.Size = New Size(&H7B, &H108)
+            Me.listBox1.TabIndex = 0
+            AddHandler Me.listBox1.SelectedIndexChanged, New EventHandler(AddressOf Me.listBox1_SelectedIndexChanged)
+            Me.contextMenuStrip1.Items.AddRange(New ToolStripItem() { Me.item1ToolStripMenuItem, Me.spreadOverrideToolStripMenuItem, Me.weapFlagsToolStripMenuItem, Me.scoreToolStripMenuItem, Me.camoToolStripMenuItem, Me.moveSpeedScaleToolStripMenuItem })
+            Me.contextMenuStrip1.Name = "contextMenuStrip1"
+            Me.contextMenuStrip1.Size = New Size(170, &H88)
+            AddHandler Me.contextMenuStrip1.Opening, New CancelEventHandler(AddressOf Me.contextMenuStrip1_Opening)
+            Me.item1ToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() { Me.freezeToolStripMenuItem, Me.freezeWithLookToolStripMenuItem })
+            Me.item1ToolStripMenuItem.Name = "item1ToolStripMenuItem"
+            Me.item1ToolStripMenuItem.Size = New Size(&HA9, &H16)
+            Me.item1ToolStripMenuItem.Text = "moveFlag"
+            Me.freezeToolStripMenuItem.Name = "freezeToolStripMenuItem"
+            Me.freezeToolStripMenuItem.Size = New Size(&H9F, &H16)
+            Me.freezeToolStripMenuItem.Text = "Freeze"
+            AddHandler Me.freezeToolStripMenuItem.Click, New EventHandler(AddressOf Me.freezeToolStripMenuItem_Click)
+            Me.freezeWithLookToolStripMenuItem.Name = "freezeWithLookToolStripMenuItem"
+            Me.freezeWithLookToolStripMenuItem.Size = New Size(&H9F, &H16)
+            Me.freezeWithLookToolStripMenuItem.Text = "Freeze with look"
+            AddHandler Me.freezeWithLookToolStripMenuItem.Click, New EventHandler(AddressOf Me.freezeWithLookToolStripMenuItem_Click)
+            Me.spreadOverrideToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() { Me.onToolStripMenuItem1, Me.offToolStripMenuItem1 })
+            Me.spreadOverrideToolStripMenuItem.Name = "spreadOverrideToolStripMenuItem"
+            Me.spreadOverrideToolStripMenuItem.Size = New Size(&HA9, &H16)
+            Me.spreadOverrideToolStripMenuItem.Text = "Spread Override"
+            Me.onToolStripMenuItem1.Name = "onToolStripMenuItem1"
+            Me.onToolStripMenuItem1.Size = New Size(&H5B, &H16)
+            Me.onToolStripMenuItem1.Text = "On"
+            AddHandler Me.onToolStripMenuItem1.Click, New EventHandler(AddressOf Me.onToolStripMenuItem1_Click)
+            Me.offToolStripMenuItem1.Name = "offToolStripMenuItem1"
+            Me.offToolStripMenuItem1.Size = New Size(&H5B, &H16)
+            Me.offToolStripMenuItem1.Text = "Off"
+            AddHandler Me.offToolStripMenuItem1.Click, New EventHandler(AddressOf Me.offToolStripMenuItem1_Click)
+            Me.weapFlagsToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() { Me.enableWeaponsToolStripMenuItem, Me.disableWeaponsToolStripMenuItem })
+            Me.weapFlagsToolStripMenuItem.Name = "weapFlagsToolStripMenuItem"
+            Me.weapFlagsToolStripMenuItem.Size = New Size(&HA9, &H16)
+            Me.weapFlagsToolStripMenuItem.Text = "WeapFlags"
+            Me.enableWeaponsToolStripMenuItem.Name = "enableWeaponsToolStripMenuItem"
+            Me.enableWeaponsToolStripMenuItem.Size = New Size(&HA4, &H16)
+            Me.enableWeaponsToolStripMenuItem.Text = "Enable Weapons"
+            AddHandler Me.enableWeaponsToolStripMenuItem.Click, New EventHandler(AddressOf Me.enableWeaponsToolStripMenuItem_Click)
+            Me.disableWeaponsToolStripMenuItem.Name = "disableWeaponsToolStripMenuItem"
+            Me.disableWeaponsToolStripMenuItem.Size = New Size(&HA4, &H16)
+            Me.disableWeaponsToolStripMenuItem.Text = "Disable Weapons"
+            AddHandler Me.disableWeaponsToolStripMenuItem.Click, New EventHandler(AddressOf Me.disableWeaponsToolStripMenuItem_Click)
+            Me.scoreToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() { Me.maxScoreToolStripMenuItem, Me.maxKillsToolStripMenuItem, Me.maxDeathsToolStripMenuItem })
+            Me.scoreToolStripMenuItem.Name = "scoreToolStripMenuItem"
+            Me.scoreToolStripMenuItem.Size = New Size(&HA9, &H16)
+            Me.scoreToolStripMenuItem.Text = "Score"
+            Me.maxScoreToolStripMenuItem.Name = "maxScoreToolStripMenuItem"
+            Me.maxScoreToolStripMenuItem.Size = New Size(&H87, &H16)
+            Me.maxScoreToolStripMenuItem.Text = "Max Score"
+            AddHandler Me.maxScoreToolStripMenuItem.Click, New EventHandler(AddressOf Me.maxScoreToolStripMenuItem_Click)
+            Me.maxKillsToolStripMenuItem.Name = "maxKillsToolStripMenuItem"
+            Me.maxKillsToolStripMenuItem.Size = New Size(&H87, &H16)
+            Me.maxKillsToolStripMenuItem.Text = "Max Kills"
+            AddHandler Me.maxKillsToolStripMenuItem.Click, New EventHandler(AddressOf Me.maxKillsToolStripMenuItem_Click)
+            Me.maxDeathsToolStripMenuItem.Name = "maxDeathsToolStripMenuItem"
+            Me.maxDeathsToolStripMenuItem.Size = New Size(&H87, &H16)
+            Me.maxDeathsToolStripMenuItem.Text = "Max Deaths"
+            AddHandler Me.maxDeathsToolStripMenuItem.Click, New EventHandler(AddressOf Me.maxDeathsToolStripMenuItem_Click)
+            Me.camoToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() { Me.devGruToolStripMenuItem, Me.aTacsAUToolStripMenuItem, Me.eRDLToolStripMenuItem, Me.siberiaToolStripMenuItem, Me.chocoToolStripMenuItem, Me.blueTigerToolStripMenuItem, Me.bloodshotToolStripMenuItem, Me.ghostexToolStripMenuItem, Me.kryptekToolStripMenuItem, Me.carbonFiberToolStripMenuItem, Me.cherryToolStripMenuItem, Me.artOfWarToolStripMenuItem, Me.roninToolStripMenuItem, Me.skullsToolStripMenuItem, Me.goldToolStripMenuItem, Me.diamondToolStripMenuItem, Me.digitalToolStripMenuItem, Me.eliteToolStripMenuItem, Me.jungleToolStripMenuItem, Me.moneyToolStripMenuItem })
+            Me.camoToolStripMenuItem.Name = "camoToolStripMenuItem"
+            Me.camoToolStripMenuItem.Size = New Size(&HA9, &H16)
+            Me.camoToolStripMenuItem.Text = "Camo"
+            Me.devGruToolStripMenuItem.Name = "devGruToolStripMenuItem"
+            Me.devGruToolStripMenuItem.Size = New Size(&H8E, &H16)
+            Me.devGruToolStripMenuItem.Text = "DevGru"
+            AddHandler Me.devGruToolStripMenuItem.Click, New EventHandler(AddressOf Me.SetCamo_Click)
+            Me.aTacsAUToolStripMenuItem.Name = "aTacsAUToolStripMenuItem"
+            Me.aTacsAUToolStripMenuItem.Size = New Size(&H8E, &H16)
+            Me.aTacsAUToolStripMenuItem.Text = "A-Tacs AU"
+            AddHandler Me.aTacsAUToolStripMenuItem.Click, New EventHandler(AddressOf Me.SetCamo_Click)
+            Me.eRDLToolStripMenuItem.Name = "eRDLToolStripMenuItem"
+            Me.eRDLToolStripMenuItem.Size = New Size(&H8E, &H16)
+            Me.eRDLToolStripMenuItem.Text = "ERDL"
+            AddHandler Me.eRDLToolStripMenuItem.Click, New EventHandler(AddressOf Me.SetCamo_Click)
+            Me.siberiaToolStripMenuItem.Name = "siberiaToolStripMenuItem"
+            Me.siberiaToolStripMenuItem.Size = New Size(&H8E, &H16)
+            Me.siberiaToolStripMenuItem.Text = "Siberia"
+            AddHandler Me.siberiaToolStripMenuItem.Click, New EventHandler(AddressOf Me.SetCamo_Click)
+            Me.chocoToolStripMenuItem.Name = "chocoToolStripMenuItem"
+            Me.chocoToolStripMenuItem.Size = New Size(&H8E, &H16)
+            Me.chocoToolStripMenuItem.Text = "Choco"
+            AddHandler Me.chocoToolStripMenuItem.Click, New EventHandler(AddressOf Me.SetCamo_Click)
+            Me.blueTigerToolStripMenuItem.Name = "blueTigerToolStripMenuItem"
+            Me.blueTigerToolStripMenuItem.Size = New Size(&H8E, &H16)
+            Me.blueTigerToolStripMenuItem.Text = "Blue Tiger"
+            AddHandler Me.blueTigerToolStripMenuItem.Click, New EventHandler(AddressOf Me.SetCamo_Click)
+            Me.bloodshotToolStripMenuItem.Name = "bloodshotToolStripMenuItem"
+            Me.bloodshotToolStripMenuItem.Size = New Size(&H8E, &H16)
+            Me.bloodshotToolStripMenuItem.Text = "Bloodshot"
+            AddHandler Me.bloodshotToolStripMenuItem.Click, New EventHandler(AddressOf Me.SetCamo_Click)
+            Me.ghostexToolStripMenuItem.Name = "ghostexToolStripMenuItem"
+            Me.ghostexToolStripMenuItem.Size = New Size(&H8E, &H16)
+            Me.ghostexToolStripMenuItem.Text = "Ghostex"
+            AddHandler Me.ghostexToolStripMenuItem.Click, New EventHandler(AddressOf Me.SetCamo_Click)
+            Me.kryptekToolStripMenuItem.Name = "kryptekToolStripMenuItem"
+            Me.kryptekToolStripMenuItem.Size = New Size(&H8E, &H16)
+            Me.kryptekToolStripMenuItem.Text = "Kryptek"
+            AddHandler Me.kryptekToolStripMenuItem.Click, New EventHandler(AddressOf Me.SetCamo_Click)
+            Me.carbonFiberToolStripMenuItem.Name = "carbonFiberToolStripMenuItem"
+            Me.carbonFiberToolStripMenuItem.Size = New Size(&H8E, &H16)
+            Me.carbonFiberToolStripMenuItem.Text = "Carbon Fiber"
+            AddHandler Me.carbonFiberToolStripMenuItem.Click, New EventHandler(AddressOf Me.SetCamo_Click)
+            Me.cherryToolStripMenuItem.Name = "cherryToolStripMenuItem"
+            Me.cherryToolStripMenuItem.Size = New Size(&H8E, &H16)
+            Me.cherryToolStripMenuItem.Text = "Cherry"
+            AddHandler Me.cherryToolStripMenuItem.Click, New EventHandler(AddressOf Me.SetCamo_Click)
+            Me.artOfWarToolStripMenuItem.Name = "artOfWarToolStripMenuItem"
+            Me.artOfWarToolStripMenuItem.Size = New Size(&H8E, &H16)
+            Me.artOfWarToolStripMenuItem.Text = "Art of War"
+            AddHandler Me.artOfWarToolStripMenuItem.Click, New EventHandler(AddressOf Me.SetCamo_Click)
+            Me.roninToolStripMenuItem.Name = "roninToolStripMenuItem"
+            Me.roninToolStripMenuItem.Size = New Size(&H8E, &H16)
+            Me.roninToolStripMenuItem.Text = "Ronin"
+            AddHandler Me.roninToolStripMenuItem.Click, New EventHandler(AddressOf Me.SetCamo_Click)
+            Me.skullsToolStripMenuItem.Name = "skullsToolStripMenuItem"
+            Me.skullsToolStripMenuItem.Size = New Size(&H8E, &H16)
+            Me.skullsToolStripMenuItem.Text = "Skulls"
+            AddHandler Me.skullsToolStripMenuItem.Click, New EventHandler(AddressOf Me.SetCamo_Click)
+            Me.goldToolStripMenuItem.Name = "goldToolStripMenuItem"
+            Me.goldToolStripMenuItem.Size = New Size(&H8E, &H16)
+            Me.goldToolStripMenuItem.Text = "Gold"
+            AddHandler Me.goldToolStripMenuItem.Click, New EventHandler(AddressOf Me.SetCamo_Click)
+            Me.diamondToolStripMenuItem.Name = "diamondToolStripMenuItem"
+            Me.diamondToolStripMenuItem.Size = New Size(&H8E, &H16)
+            Me.diamondToolStripMenuItem.Text = "Diamond"
+            AddHandler Me.diamondToolStripMenuItem.Click, New EventHandler(AddressOf Me.SetCamo_Click)
+            Me.digitalToolStripMenuItem.Name = "digitalToolStripMenuItem"
+            Me.digitalToolStripMenuItem.Size = New Size(&H8E, &H16)
+            Me.digitalToolStripMenuItem.Text = "Digital"
+            AddHandler Me.digitalToolStripMenuItem.Click, New EventHandler(AddressOf Me.SetCamo_Click)
+            Me.eliteToolStripMenuItem.Name = "eliteToolStripMenuItem"
+            Me.eliteToolStripMenuItem.Size = New Size(&H8E, &H16)
+            Me.eliteToolStripMenuItem.Text = "Elite"
+            AddHandler Me.eliteToolStripMenuItem.Click, New EventHandler(AddressOf Me.SetCamo_Click)
+            Me.jungleToolStripMenuItem.Name = "jungleToolStripMenuItem"
+            Me.jungleToolStripMenuItem.Size = New Size(&H8E, &H16)
+            Me.jungleToolStripMenuItem.Text = "Jungle"
+            AddHandler Me.jungleToolStripMenuItem.Click, New EventHandler(AddressOf Me.SetCamo_Click)
+            Me.moneyToolStripMenuItem.Name = "moneyToolStripMenuItem"
+            Me.moneyToolStripMenuItem.Size = New Size(&H8E, &H16)
+            Me.moneyToolStripMenuItem.Text = "Cyborg"
+            AddHandler Me.moneyToolStripMenuItem.Click, New EventHandler(AddressOf Me.SetCamo_Click)
+            Me.moveSpeedScaleToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() { Me.noneToolStripMenuItem, Me.mediumToolStripMenuItem, Me.highToolStripMenuItem })
+            Me.moveSpeedScaleToolStripMenuItem.Name = "moveSpeedScaleToolStripMenuItem"
+            Me.moveSpeedScaleToolStripMenuItem.Size = New Size(&HA9, &H16)
+            Me.moveSpeedScaleToolStripMenuItem.Text = "Move Speed Scale"
+            Me.noneToolStripMenuItem.Name = "noneToolStripMenuItem"
+            Me.noneToolStripMenuItem.Size = New Size(&H98, &H16)
+            Me.noneToolStripMenuItem.Text = "None"
+            AddHandler Me.noneToolStripMenuItem.Click, New EventHandler(AddressOf Me.speedToolStripMenuItem_Click)
+            Me.mediumToolStripMenuItem.Name = "mediumToolStripMenuItem"
+            Me.mediumToolStripMenuItem.Size = New Size(&H98, &H16)
+            Me.mediumToolStripMenuItem.Text = "Medium"
+            AddHandler Me.mediumToolStripMenuItem.Click, New EventHandler(AddressOf Me.speedToolStripMenuItem_Click)
+            Me.highToolStripMenuItem.Name = "highToolStripMenuItem"
+            Me.highToolStripMenuItem.Size = New Size(&H98, &H16)
+            Me.highToolStripMenuItem.Text = "High"
+            AddHandler Me.highToolStripMenuItem.Click, New EventHandler(AddressOf Me.speedToolStripMenuItem_Click)
+            Me.button1.Location = New Point(12, &H1B)
+            Me.button1.Name = "button1"
+            Me.button1.Size = New Size(&H7B, &H1A)
+            Me.button1.TabIndex = 1
+            Me.button1.Text = "Connect"
+            Me.button1.UseVisualStyleBackColor = True
+            AddHandler Me.button1.Click, New EventHandler(AddressOf Me.button1_Click_1)
+            Me.button2.Location = New Point(12, &H3B)
+            Me.button2.Name = "button2"
+            Me.button2.Size = New Size(&H7B, &H1A)
+            Me.button2.TabIndex = 2
+            Me.button2.Text = "Refresh"
+            Me.button2.UseVisualStyleBackColor = True
+            AddHandler Me.button2.Click, New EventHandler(AddressOf Me.button2_Click)
+            Me.menuStrip1.Items.AddRange(New ToolStripItem() { Me.toolStripMenuItem1, Me.versionToolStripMenuItem })
+            Me.menuStrip1.Location = New Point(0, 0)
+            Me.menuStrip1.Name = "menuStrip1"
+            Me.menuStrip1.Size = New Size(&H25A, &H18)
+            Me.menuStrip1.TabIndex = 4
+            Me.menuStrip1.Text = "menuStrip1"
+            Me.toolStripMenuItem1.DropDownItems.AddRange(New ToolStripItem() { Me.settingsToolStripMenuItem, Me.exitToolStripMenuItem })
+            Me.toolStripMenuItem1.Name = "toolStripMenuItem1"
+            Me.toolStripMenuItem1.Size = New Size(80, 20)
+            Me.toolStripMenuItem1.Text = "Application"
+            Me.settingsToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() { Me.stealthModeToolStripMenuItem, Me.autoEditToolStripMenuItem, Me.devModeToolStripMenuItem })
+            Me.settingsToolStripMenuItem.Name = "settingsToolStripMenuItem"
+            Me.settingsToolStripMenuItem.Size = New Size(&H74, &H16)
+            Me.settingsToolStripMenuItem.Text = "Settings"
+            AddHandler Me.settingsToolStripMenuItem.Click, New EventHandler(AddressOf Me.settingsToolStripMenuItem_Click)
+            Me.stealthModeToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() { Me.onToolStripMenuItem, Me.offToolStripMenuItem })
+            Me.stealthModeToolStripMenuItem.Name = "stealthModeToolStripMenuItem"
+            Me.stealthModeToolStripMenuItem.Size = New Size(&H90, &H16)
+            Me.stealthModeToolStripMenuItem.Text = "Stealth Mode"
+            Me.onToolStripMenuItem.Name = "onToolStripMenuItem"
+            Me.onToolStripMenuItem.Size = New Size(&H5B, &H16)
+            Me.onToolStripMenuItem.Text = "On"
+            AddHandler Me.onToolStripMenuItem.Click, New EventHandler(AddressOf Me.onToolStripMenuItem_Click)
+            Me.offToolStripMenuItem.Name = "offToolStripMenuItem"
+            Me.offToolStripMenuItem.Size = New Size(&H5B, &H16)
+            Me.offToolStripMenuItem.Text = "Off"
+            AddHandler Me.offToolStripMenuItem.Click, New EventHandler(AddressOf Me.offToolStripMenuItem_Click)
+            Me.autoEditToolStripMenuItem.Name = "autoEditToolStripMenuItem"
+            Me.autoEditToolStripMenuItem.Size = New Size(&H90, &H16)
+            Me.autoEditToolStripMenuItem.Text = "Auto Edit"
+            AddHandler Me.autoEditToolStripMenuItem.Click, New EventHandler(AddressOf Me.autoEditToolStripMenuItem_Click)
+            Me.devModeToolStripMenuItem.Image = DirectCast(manager.GetObject("devModeToolStripMenuItem.Image"), Image)
+            Me.devModeToolStripMenuItem.Name = "devModeToolStripMenuItem"
+            Me.devModeToolStripMenuItem.Size = New Size(&H90, &H16)
+            Me.devModeToolStripMenuItem.Text = "Dev Mode"
+            AddHandler Me.devModeToolStripMenuItem.Click, New EventHandler(AddressOf Me.devModeToolStripMenuItem_Click)
+            Me.exitToolStripMenuItem.Name = "exitToolStripMenuItem"
+            Me.exitToolStripMenuItem.Size = New Size(&H74, &H16)
+            Me.exitToolStripMenuItem.Text = "Exit"
+            AddHandler Me.exitToolStripMenuItem.Click, New EventHandler(AddressOf Me.exitToolStripMenuItem_Click)
+            Me.versionToolStripMenuItem.DropDownItems.AddRange(New ToolStripItem() { Me.toolStripMenuItem3 })
+            Me.versionToolStripMenuItem.Name = "versionToolStripMenuItem"
+            Me.versionToolStripMenuItem.Size = New Size(&H3A, 20)
+            Me.versionToolStripMenuItem.Text = "Version"
+            Me.toolStripMenuItem3.Name = "toolStripMenuItem3"
+            Me.toolStripMenuItem3.Size = New Size(&H62, &H16)
+            Me.toolStripMenuItem3.Text = "1.0.5"
+            Me.groupBox17.Location = New Point(12, &H16C)
+            Me.groupBox17.Name = "groupBox17"
+            Me.groupBox17.Size = New Size(&H242, &H90)
+            Me.groupBox17.TabIndex = 6
+            Me.groupBox17.TabStop = False
+            Me.groupBox17.Text = "Dev Options - Implement Later"
+            Me.tabPage6.Controls.Add(Me.richTextBox1)
+            Me.tabPage6.Location = New Point(4, &H16)
+            Me.tabPage6.Name = "tabPage6"
+            Me.tabPage6.Size = New Size(&H1B9, &H131)
+            Me.tabPage6.TabIndex = 5
+            Me.tabPage6.Text = "Information"
+            Me.tabPage6.UseVisualStyleBackColor = True
+            Me.richTextBox1.Location = New Point(3, 3)
+            Me.richTextBox1.Name = "richTextBox1"
+            Me.richTextBox1.Size = New Size(&H1B3, &H12B)
+            Me.richTextBox1.TabIndex = 0
+            Me.richTextBox1.Text = "Attach to a RSS thread later."
+            Me.tabPage5.Controls.Add(Me.groupBox2)
+            Me.tabPage5.Location = New Point(4, &H16)
+            Me.tabPage5.Name = "tabPage5"
+            Me.tabPage5.Size = New Size(&H1B9, &H131)
+            Me.tabPage5.TabIndex = 4
+            Me.tabPage5.Text = "Xex"
+            Me.tabPage5.UseVisualStyleBackColor = True
+            Me.groupBox2.Controls.Add(Me.button48)
+            Me.groupBox2.Controls.Add(Me.button47)
+            Me.groupBox2.Controls.Add(Me.button7)
+            Me.groupBox2.Controls.Add(Me.button6)
+            Me.groupBox2.Controls.Add(Me.button5)
+            Me.groupBox2.Location = New Point(3, 3)
+            Me.groupBox2.Name = "groupBox2"
+            Me.groupBox2.Size = New Size(&H1B3, &H5B)
+            Me.groupBox2.TabIndex = 5
+            Me.groupBox2.TabStop = False
+            Me.groupBox2.Text = "Xex Patchs"
+            Me.button48.Location = New Point(&H93, &H36)
+            Me.button48.Name = "button48"
+            Me.button48.Size = New Size(&H91, &H1D)
+            Me.button48.TabIndex = 6
+            Me.button48.Text = "RSA Checks"
+            Me.button48.UseVisualStyleBackColor = True
+            AddHandler Me.button48.Click, New EventHandler(AddressOf Me.button48_Click)
+            Me.button47.Location = New Point(10, &H36)
+            Me.button47.Name = "button47"
+            Me.button47.Size = New Size(&H83, &H1D)
+            Me.button47.TabIndex = 1
+            Me.button47.Text = "Ban Bypass"
+            Me.button47.UseVisualStyleBackColor = True
+            AddHandler Me.button47.Click, New EventHandler(AddressOf Me.button47_Click)
+            Me.button7.Location = New Point(&H12A, &H13)
+            Me.button7.Name = "button7"
+            Me.button7.Size = New Size(&H83, &H1D)
+            Me.button7.TabIndex = 0
+            Me.button7.Text = "Cheat Protection"
+            Me.button7.UseVisualStyleBackColor = True
+            AddHandler Me.button7.Click, New EventHandler(AddressOf Me.button7_Click)
+            Me.button6.Location = New Point(&H93, &H13)
+            Me.button6.Name = "button6"
+            Me.button6.Size = New Size(&H91, &H1D)
+            Me.button6.TabIndex = 0
+            Me.button6.Text = "Custom Class Checks"
+            Me.button6.UseVisualStyleBackColor = True
+            AddHandler Me.button6.Click, New EventHandler(AddressOf Me.button6_Click)
+            Me.button5.Location = New Point(10, &H13)
+            Me.button5.Name = "button5"
+            Me.button5.Size = New Size(&H83, &H1D)
+            Me.button5.TabIndex = 0
+            Me.button5.Text = "Uav Always On"
+            Me.button5.UseVisualStyleBackColor = True
+            AddHandler Me.button5.Click, New EventHandler(AddressOf Me.button5_Click)
+            Me.tabPage7.Controls.Add(Me.button43)
+            Me.tabPage7.Controls.Add(Me.groupBox16)
+            Me.tabPage7.Controls.Add(Me.groupBox14)
+            Me.tabPage7.Controls.Add(Me.groupBox9)
+            Me.tabPage7.Location = New Point(4, &H16)
+            Me.tabPage7.Name = "tabPage7"
+            Me.tabPage7.Size = New Size(&H1B9, &H131)
+            Me.tabPage7.TabIndex = 6
+            Me.tabPage7.Text = "Other"
+            Me.tabPage7.UseVisualStyleBackColor = True
+            Me.button43.Location = New Point(&HDE, 10)
+            Me.button43.Name = "button43"
+            Me.button43.Size = New Size(&HD8, &H33)
+            Me.button43.TabIndex = 3
+            Me.button43.Text = "Testing button YOLO SWAG"
+            Me.button43.UseVisualStyleBackColor = True
+            AddHandler Me.button43.Click, New EventHandler(AddressOf Me.button43_Click)
+            Me.groupBox16.Controls.Add(Me.button45)
+            Me.groupBox16.Controls.Add(Me.button44)
+            Me.groupBox16.Controls.Add(Me.textBox10)
+            Me.groupBox16.Controls.Add(Me.textBox9)
+            Me.groupBox16.Location = New Point(3, &HBC)
+            Me.groupBox16.Name = "groupBox16"
+            Me.groupBox16.Size = New Size(&H1B3, &H72)
+            Me.groupBox16.TabIndex = 2
+            Me.groupBox16.TabStop = False
+            Me.groupBox16.Text = "Spam"
+            Me.button45.Location = New Point(&HE3, &H4E)
+            Me.button45.Name = "button45"
+            Me.button45.Size = New Size(&HCA, &H24)
+            Me.button45.TabIndex = 3
+            Me.button45.Text = "Stop"
+            Me.button45.UseVisualStyleBackColor = True
+            AddHandler Me.button45.Click, New EventHandler(AddressOf Me.button45_Click)
+            Me.button44.Location = New Point(6, &H4E)
+            Me.button44.Name = "button44"
+            Me.button44.Size = New Size(&HCA, &H24)
+            Me.button44.TabIndex = 2
+            Me.button44.Text = "Start"
+            Me.button44.UseVisualStyleBackColor = True
+            AddHandler Me.button44.Click, New EventHandler(AddressOf Me.button44_Click)
+            Me.textBox10.Location = New Point(6, &H34)
+            Me.textBox10.Name = "textBox10"
+            Me.textBox10.Size = New Size(&H1A7, 20)
+            Me.textBox10.TabIndex = 1
+            Me.textBox10.Text = "Center"
+            Me.textBox9.Location = New Point(6, 20)
+            Me.textBox9.Name = "textBox9"
+            Me.textBox9.Size = New Size(&H1A7, 20)
+            Me.textBox9.TabIndex = 0
+            Me.textBox9.Text = "Killfeed"
+            Me.groupBox14.Controls.Add(Me.groupBox15)
+            Me.groupBox14.Location = New Point(3, &H43)
+            Me.groupBox14.Name = "groupBox14"
+            Me.groupBox14.Size = New Size(&H1B3, &H79)
+            Me.groupBox14.TabIndex = 1
+            Me.groupBox14.TabStop = False
+            Me.groupBox14.Text = "Zombies"
+            Me.groupBox15.Controls.Add(Me.button38)
+            Me.groupBox15.Controls.Add(Me.button42)
+            Me.groupBox15.Controls.Add(Me.button41)
+            Me.groupBox15.Controls.Add(Me.button40)
+            Me.groupBox15.Controls.Add(Me.button39)
+            Me.groupBox15.Controls.Add(Me.button37)
+            Me.groupBox15.Location = New Point(6, &H13)
+            Me.groupBox15.Name = "groupBox15"
+            Me.groupBox15.Size = New Size(&H1A7, &H60)
+            Me.groupBox15.TabIndex = 0
+            Me.groupBox15.TabStop = False
+            Me.groupBox15.Text = "Mob of the Dead"
+            Me.button38.Location = New Point(6, &H37)
+            Me.button38.Name = "button38"
+            Me.button38.Size = New Size(&H6F, 30)
+            Me.button38.TabIndex = 1
+            Me.button38.Text = "Afterlife"
+            Me.button38.UseVisualStyleBackColor = True
+            AddHandler Me.button38.Click, New EventHandler(AddressOf Me.button38_Click)
+            Me.button42.Location = New Point(&H132, &H37)
+            Me.button42.Name = "button42"
+            Me.button42.Size = New Size(&H6F, 30)
+            Me.button42.TabIndex = 0
+            Me.button42.Text = "Tomahawk"
+            Me.button42.UseVisualStyleBackColor = True
+            AddHandler Me.button42.Click, New EventHandler(AddressOf Me.button42_Click)
+            Me.button41.Location = New Point(&H132, &H13)
+            Me.button41.Name = "button41"
+            Me.button41.Size = New Size(&H6F, 30)
+            Me.button41.TabIndex = 0
+            Me.button41.Text = "PDW"
+            Me.button41.UseVisualStyleBackColor = True
+            AddHandler Me.button41.Click, New EventHandler(AddressOf Me.button41_Click)
+            Me.button40.Location = New Point(&H9C, &H37)
+            Me.button40.Name = "button40"
+            Me.button40.Size = New Size(&H6F, 30)
+            Me.button40.TabIndex = 0
+            Me.button40.Text = "Ak47"
+            Me.button40.UseVisualStyleBackColor = True
+            AddHandler Me.button40.Click, New EventHandler(AddressOf Me.button40_Click)
+            Me.button39.Location = New Point(&H9C, &H13)
+            Me.button39.Name = "button39"
+            Me.button39.Size = New Size(&H6F, 30)
+            Me.button39.TabIndex = 0
+            Me.button39.Text = "Blundergat"
+            Me.button39.UseVisualStyleBackColor = True
+            AddHandler Me.button39.Click, New EventHandler(AddressOf Me.button39_Click)
+            Me.button37.Location = New Point(6, &H13)
+            Me.button37.Name = "button37"
+            Me.button37.Size = New Size(&H6F, 30)
+            Me.button37.TabIndex = 0
+            Me.button37.Text = "Mini gun"
+            Me.button37.UseVisualStyleBackColor = True
+            AddHandler Me.button37.Click, New EventHandler(AddressOf Me.button37_Click_1)
+            Me.groupBox9.Controls.Add(Me.checkBox2)
+            Me.groupBox9.Controls.Add(Me.button31)
+            Me.groupBox9.Location = New Point(3, 3)
+            Me.groupBox9.Name = "groupBox9"
+            Me.groupBox9.Size = New Size(&HD5, &H3A)
+            Me.groupBox9.TabIndex = 0
+            Me.groupBox9.TabStop = False
+            Me.groupBox9.Text = "Infections"
+            Me.checkBox2.AutoSize = True
+            Me.checkBox2.Location = New Point(&H7B, &H1B)
+            Me.checkBox2.Name = "checkBox2"
+            Me.checkBox2.Size = New Size(90, &H11)
+            Me.checkBox2.TabIndex = 1
+            Me.checkBox2.Text = "Loop Cheater"
+            Me.checkBox2.UseVisualStyleBackColor = True
+            AddHandler Me.checkBox2.CheckedChanged, New EventHandler(AddressOf Me.checkBox2_CheckedChanged)
+            Me.button31.Location = New Point(6, &H13)
+            Me.button31.Name = "button31"
+            Me.button31.Size = New Size(&H6F, 30)
+            Me.button31.TabIndex = 0
+            Me.button31.Text = "Cheater"
+            Me.button31.UseVisualStyleBackColor = True
+            AddHandler Me.button31.Click, New EventHandler(AddressOf Me.button31_Click_1)
+            Me.tabPage4.Controls.Add(Me.groupBox8)
+            Me.tabPage4.Location = New Point(4, &H16)
+            Me.tabPage4.Name = "tabPage4"
+            Me.tabPage4.Size = New Size(&H1B9, &H131)
+            Me.tabPage4.TabIndex = 3
+            Me.tabPage4.Text = "Stats"
+            Me.tabPage4.UseVisualStyleBackColor = True
+            Me.groupBox8.Controls.Add(Me.listBox8)
+            Me.groupBox8.Controls.Add(Me.listBox7)
+            Me.groupBox8.Controls.Add(Me.listBox6)
+            Me.groupBox8.Controls.Add(Me.listBox5)
+            Me.groupBox8.Controls.Add(Me.listBox4)
+            Me.groupBox8.Controls.Add(Me.listBox3)
+            Me.groupBox8.Controls.Add(Me.listBox2)
+            Me.groupBox8.Controls.Add(Me.label18)
+            Me.groupBox8.Controls.Add(Me.label17)
+            Me.groupBox8.Controls.Add(Me.label16)
+            Me.groupBox8.Controls.Add(Me.label15)
+            Me.groupBox8.Controls.Add(Me.label14)
+            Me.groupBox8.Controls.Add(Me.label13)
+            Me.groupBox8.Controls.Add(Me.label12)
+            Me.groupBox8.Controls.Add(Me.textBox11)
+            Me.groupBox8.Controls.Add(Me.label11)
+            Me.groupBox8.Controls.Add(Me.numericUpDown13)
+            Me.groupBox8.Controls.Add(Me.label1)
+            Me.groupBox8.Controls.Add(Me.checkBox3)
+            Me.groupBox8.Controls.Add(Me.button49)
+            Me.groupBox8.Controls.Add(Me.label10)
+            Me.groupBox8.Controls.Add(Me.numericUpDown12)
+            Me.groupBox8.Controls.Add(Me.label9)
+            Me.groupBox8.Controls.Add(Me.numericUpDown11)
+            Me.groupBox8.Controls.Add(Me.label8)
+            Me.groupBox8.Controls.Add(Me.label7)
+            Me.groupBox8.Controls.Add(Me.label6)
+            Me.groupBox8.Controls.Add(Me.label5)
+            Me.groupBox8.Controls.Add(Me.numericUpDown10)
+            Me.groupBox8.Controls.Add(Me.numericUpDown9)
+            Me.groupBox8.Controls.Add(Me.numericUpDown8)
+            Me.groupBox8.Controls.Add(Me.numericUpDown7)
+            Me.groupBox8.Controls.Add(Me.label4)
+            Me.groupBox8.Controls.Add(Me.numericUpDown6)
+            Me.groupBox8.Controls.Add(Me.label3)
+            Me.groupBox8.Controls.Add(Me.label2)
+            Me.groupBox8.Controls.Add(Me.numericUpDown5)
+            Me.groupBox8.Controls.Add(Me.numericUpDown4)
+            Me.groupBox8.Controls.Add(Me.button29)
+            Me.groupBox8.Controls.Add(Me.button28)
+            Me.groupBox8.Location = New Point(0, 3)
+            Me.groupBox8.Name = "groupBox8"
+            Me.groupBox8.Size = New Size(440, &H12D)
+            Me.groupBox8.TabIndex = 0
+            Me.groupBox8.TabStop = False
+            Me.groupBox8.Text = "MPData - Finish back end"
+            Me.listBox8.Enabled = False
+            Me.listBox8.FormattingEnabled = True
+            Me.listBox8.Items.AddRange(New Object() { "Dexterity", "Engineer", "Dead silence", "Extreme Conditioning", "Awareness" })
+            Me.listBox8.Location = New Point(&HE9, &HE2)
+            Me.listBox8.Name = "listBox8"
+            Me.listBox8.Size = New Size(&HCD, &H11)
+            Me.listBox8.TabIndex = &H27
+            Me.listBox7.Enabled = False
+            Me.listBox7.FormattingEnabled = True
+            Me.listBox7.Items.AddRange(New Object() { "Hard wired", "Scavenger", "Cold blooded", "Fast hands", "Toughness" })
+            Me.listBox7.Location = New Point(&HE9, 200)
+            Me.listBox7.Name = "listBox7"
+            Me.listBox7.Size = New Size(&HCD, &H11)
+            Me.listBox7.TabIndex = &H26
+            Me.listBox6.Enabled = False
+            Me.listBox6.FormattingEnabled = True
+            Me.listBox6.Items.AddRange(New Object() { "Lightweight", "Flak jacket", "Blind eye", "Hardline", "Ghost" })
+            Me.listBox6.Location = New Point(&HE9, &HAC)
+            Me.listBox6.Name = "listBox6"
+            Me.listBox6.Size = New Size(&HCD, &H11)
+            Me.listBox6.TabIndex = &H25
+            Me.listBox5.Enabled = False
+            Me.listBox5.FormattingEnabled = True
+            Me.listBox5.Items.AddRange(New Object() { "None", "DEVGRU", "A-TACS AU", "ERDL", "Siberia", "Choco", "Blue Tiger", "Bloodshot", "Ghostex: Delta 6", "Kyrptek: Typhon", "Carbon", "Cherry Blossom", "Art of War", "Ronin", "Skulls", "Gold", "Diamon", "CE Digital", "Elite Member", "Jungle Warfare", "Money", "Dia de Muertos", "Graffiti", "Kawaii", "Party Rock", "Zombies", "Viper", "Bacon", "Rainbow :D" })
+            Me.listBox5.Location = New Point(&H11A, &H92)
+            Me.listBox5.Name = "listBox5"
+            Me.listBox5.Size = New Size(&H9C, &H11)
+            Me.listBox5.TabIndex = &H24
+            Me.listBox4.Enabled = False
+            Me.listBox4.FormattingEnabled = True
+            Me.listBox4.Items.AddRange(New Object() { "None", "Five seven", "Tac-45", "B23R", "Executioner", "Kap-40", "SMAW", "FHJ-18 AA", "RPG", "Crossbow", "Ballistic knife" })
+            Me.listBox4.Location = New Point(&H126, 120)
+            Me.listBox4.Name = "listBox4"
+            Me.listBox4.Size = New Size(&H90, &H11)
+            Me.listBox4.TabIndex = &H23
+            Me.listBox3.Enabled = False
+            Me.listBox3.FormattingEnabled = True
+            Me.listBox3.Items.AddRange(New Object() { "None", "DEVGRU", "A-TACS AU", "ERDL", "Siberia", "Choco", "Blue Tiger", "Bloodshot", "Ghostex: Delta 6", "Kyrptek: Typhon", "Carbon", "Cherry Blossom", "Art of War", "Ronin", "Skulls", "Gold", "Diamond", "CE Digital", "Elite Member", "Jungle Warfare", "Money", "Dia de Muertos", "Graffiti", "Kawaii", "Party Rock", "Zombies", "Viper", "Bacon", "Rainbow :D" })
+            Me.listBox3.Location = New Point(&H109, &H5D)
+            Me.listBox3.Name = "listBox3"
+            Me.listBox3.Size = New Size(&HA9, &H11)
+            Me.listBox3.TabIndex = &H22
+            Me.listBox2.Enabled = False
+            Me.listBox2.FormattingEnabled = True
+            Me.listBox2.Items.AddRange(New Object() { "None", "MTAR", "Type 25", "Swat-556", "Fal-OSW", "M27", "Scar-H", "SMR", "M8A1", "AN-94", "R870 MCS", "S12", "KSG", "M1216", "MK 48", "QBB LSW", "LSAT", "HAMR", "SVU-AS", "DSR 50", "Ballista", "XPR-50", "MP7", "PDW-57", "Vector K10", "Chicom CQB", "Skorpion Evo", "Assault Shield", "Death Machine", "War Machine", "" })
+            Me.listBox2.Location = New Point(&H115, 70)
+            Me.listBox2.Name = "listBox2"
+            Me.listBox2.Size = New Size(&H9D, &H11)
+            Me.listBox2.TabIndex = &H21
+            Me.label18.AutoSize = True
+            Me.label18.Location = New Point(&HBA, &HE4)
+            Me.label18.Name = "label18"
+            Me.label18.Size = New Size(&H29, 13)
+            Me.label18.TabIndex = &H20
+            Me.label18.Text = "Perk 3:"
+            Me.label17.AutoSize = True
+            Me.label17.Location = New Point(&HBA, &HCA)
+            Me.label17.Name = "label17"
+            Me.label17.Size = New Size(&H29, 13)
+            Me.label17.TabIndex = &H1F
+            Me.label17.Text = "Perk 2:"
+            Me.label16.AutoSize = True
+            Me.label16.Location = New Point(&HBA, &HB0)
+            Me.label16.Name = "label16"
+            Me.label16.Size = New Size(&H29, 13)
+            Me.label16.TabIndex = 30
+            Me.label16.Text = "Perk 1:"
+            Me.label15.AutoSize = True
+            Me.label15.Location = New Point(&HBA, 150)
+            Me.label15.Name = "label15"
+            Me.label15.Size = New Size(90, 13)
+            Me.label15.TabIndex = &H1D
+            Me.label15.Text = "Secondary camo:"
+            Me.label14.AutoSize = True
+            Me.label14.Location = New Point(&HBA, &H7C)
+            Me.label14.Name = "label14"
+            Me.label14.Size = New Size(&H66, 13)
+            Me.label14.TabIndex = &H1C
+            Me.label14.Text = "Secondary weapon:"
+            Me.label13.AutoSize = True
+            Me.label13.Location = New Point(&HBA, &H62)
+            Me.label13.Name = "label13"
+            Me.label13.Size = New Size(&H49, 13)
+            Me.label13.TabIndex = &H1B
+            Me.label13.Text = "Primary camo:"
+            Me.label12.AutoSize = True
+            Me.label12.Location = New Point(&HBA, &H48)
+            Me.label12.Name = "label12"
+            Me.label12.Size = New Size(&H55, 13)
+            Me.label12.TabIndex = &H1A
+            Me.label12.Text = "Primary weapon:"
+            Me.textBox11.Enabled = False
+            Me.textBox11.Location = New Point(&H100, &H2B)
+            Me.textBox11.Name = "textBox11"
+            Me.textBox11.Size = New Size(&HB2, 20)
+            Me.textBox11.TabIndex = &H19
+            Me.label11.AutoSize = True
+            Me.label11.Location = New Point(&H133, &H16)
+            Me.label11.Name = "label11"
+            Me.label11.Size = New Size(&H3F, 13)
+            Me.label11.TabIndex = &H18
+            Me.label11.Text = "Class index:"
+            Me.numericUpDown13.Enabled = False
+            Me.numericUpDown13.Location = New Point(&H178, 20)
+            Me.numericUpDown13.Name = "numericUpDown13"
+            Me.numericUpDown13.Size = New Size(&H3A, 20)
+            Me.numericUpDown13.TabIndex = &H17
+            Me.label1.AutoSize = True
+            Me.label1.Location = New Point(&HBA, &H2E)
+            Me.label1.Name = "label1"
+            Me.label1.Size = New Size(&H40, 13)
+            Me.label1.TabIndex = &H16
+            Me.label1.Text = "Class name:"
+            Me.checkBox3.AutoSize = True
+            Me.checkBox3.Checked = True
+            Me.checkBox3.CheckState = CheckState.Checked
+            Me.checkBox3.Enabled = False
+            Me.checkBox3.Location = New Point(&H165, &H111)
+            Me.checkBox3.Name = "checkBox3"
+            Me.checkBox3.Size = New Size(&H38, &H11)
+            Me.checkBox3.TabIndex = &H15
+            Me.checkBox3.Text = "Online"
+            Me.checkBox3.UseVisualStyleBackColor = True
+            AddHandler Me.checkBox3.CheckedChanged, New EventHandler(AddressOf Me.checkBox3_CheckedChanged)
+            Me.button49.Enabled = False
+            Me.button49.Location = New Point(240, &H109)
+            Me.button49.Name = "button49"
+            Me.button49.Size = New Size(&H6F, 30)
+            Me.button49.TabIndex = 20
+            Me.button49.Text = "Unlock All"
+            Me.button49.UseVisualStyleBackColor = True
+            AddHandler Me.button49.Click, New EventHandler(AddressOf Me.button49_Click)
+            Me.label10.AutoSize = True
+            Me.label10.Location = New Point(3, &HE4)
+            Me.label10.Name = "label10"
+            Me.label10.Size = New Size(&H40, 13)
+            Me.label10.TabIndex = &H13
+            Me.label10.Text = "Timeplayed:"
+            Me.numericUpDown12.Location = New Point(80, &HE2)
+            Dim bits As Integer() = New Integer(4  - 1) {}
+            bits(0) = -2
+            Me.numericUpDown12.Maximum = New Decimal(bits)
+            bits = New Integer(4  - 1) {}
+            bits(0) = -2
+            bits(3) = -2147483648
+            Me.numericUpDown12.Minimum = New Decimal(bits)
+            Me.numericUpDown12.Name = "numericUpDown12"
+            Me.numericUpDown12.Size = New Size(100, 20)
+            Me.numericUpDown12.TabIndex = &H12
+            Me.label9.AutoSize = True
+            Me.label9.Location = New Point(3, &HCA)
+            Me.label9.Name = "label9"
+            Me.label9.Size = New Size(&H34, 13)
+            Me.label9.TabIndex = &H11
+            Me.label9.Text = "Killstreak:"
+            Me.numericUpDown11.Location = New Point(80, 200)
+            bits = New Integer(4  - 1) {}
+            bits(0) = -2
+            Me.numericUpDown11.Maximum = New Decimal(bits)
+            bits = New Integer(4  - 1) {}
+            bits(0) = -2
+            bits(3) = -2147483648
+            Me.numericUpDown11.Minimum = New Decimal(bits)
+            Me.numericUpDown11.Name = "numericUpDown11"
+            Me.numericUpDown11.Size = New Size(100, 20)
+            Me.numericUpDown11.TabIndex = &H10
+            Me.label8.AutoSize = True
+            Me.label8.Location = New Point(3, &HB0)
+            Me.label8.Name = "label8"
+            Me.label8.Size = New Size(&H2B, 13)
+            Me.label8.TabIndex = 15
+            Me.label8.Text = "Losses:"
+            Me.label7.AutoSize = True
+            Me.label7.Location = New Point(3, 150)
+            Me.label7.Name = "label7"
+            Me.label7.Size = New Size(&H22, 13)
+            Me.label7.TabIndex = 14
+            Me.label7.Text = "Wins:"
+            Me.label6.AutoSize = True
+            Me.label6.Location = New Point(3, &H7C)
+            Me.label6.Name = "label6"
+            Me.label6.Size = New Size(&H2C, 13)
+            Me.label6.TabIndex = 13
+            Me.label6.Text = "Deaths:"
+            Me.label5.AutoSize = True
+            Me.label5.Location = New Point(3, &H62)
+            Me.label5.Name = "label5"
+            Me.label5.Size = New Size(&H1C, 13)
+            Me.label5.TabIndex = 12
+            Me.label5.Text = "Kills:"
+            Me.numericUpDown10.Location = New Point(80, &HAE)
+            bits = New Integer(4  - 1) {}
+            bits(0) = -2
+            Me.numericUpDown10.Maximum = New Decimal(bits)
+            bits = New Integer(4  - 1) {}
+            bits(0) = -2
+            bits(3) = -2147483648
+            Me.numericUpDown10.Minimum = New Decimal(bits)
+            Me.numericUpDown10.Name = "numericUpDown10"
+            Me.numericUpDown10.Size = New Size(100, 20)
+            Me.numericUpDown10.TabIndex = 11
+            Me.numericUpDown9.Location = New Point(80, &H94)
+            bits = New Integer(4  - 1) {}
+            bits(0) = -2
+            Me.numericUpDown9.Maximum = New Decimal(bits)
+            bits = New Integer(4  - 1) {}
+            bits(0) = -2
+            bits(3) = -2147483648
+            Me.numericUpDown9.Minimum = New Decimal(bits)
+            Me.numericUpDown9.Name = "numericUpDown9"
+            Me.numericUpDown9.Size = New Size(100, 20)
+            Me.numericUpDown9.TabIndex = 10
+            Me.numericUpDown8.Location = New Point(80, &H7A)
+            bits = New Integer(4  - 1) {}
+            bits(0) = -2
+            Me.numericUpDown8.Maximum = New Decimal(bits)
+            bits = New Integer(4  - 1) {}
+            bits(0) = -2
+            bits(3) = -2147483648
+            Me.numericUpDown8.Minimum = New Decimal(bits)
+            Me.numericUpDown8.Name = "numericUpDown8"
+            Me.numericUpDown8.Size = New Size(100, 20)
+            Me.numericUpDown8.TabIndex = 9
+            Me.numericUpDown7.Location = New Point(80, &H60)
+            bits = New Integer(4  - 1) {}
+            bits(0) = -2
+            Me.numericUpDown7.Maximum = New Decimal(bits)
+            bits = New Integer(4  - 1) {}
+            bits(0) = -2
+            bits(3) = -2147483648
+            Me.numericUpDown7.Minimum = New Decimal(bits)
+            Me.numericUpDown7.Name = "numericUpDown7"
+            Me.numericUpDown7.Size = New Size(100, 20)
+            Me.numericUpDown7.TabIndex = 8
+            Me.label4.AutoSize = True
+            Me.label4.Location = New Point(3, &H48)
+            Me.label4.Name = "label4"
+            Me.label4.Size = New Size(&H26, 13)
+            Me.label4.TabIndex = 7
+            Me.label4.Text = "Score:"
+            Me.numericUpDown6.Location = New Point(80, 70)
+            bits = New Integer(4  - 1) {}
+            bits(0) = -2
+            Me.numericUpDown6.Maximum = New Decimal(bits)
+            bits = New Integer(4  - 1) {}
+            bits(0) = -2
+            bits(3) = -2147483648
+            Me.numericUpDown6.Minimum = New Decimal(bits)
+            Me.numericUpDown6.Name = "numericUpDown6"
+            Me.numericUpDown6.Size = New Size(100, 20)
+            Me.numericUpDown6.TabIndex = 6
+            Me.label3.AutoSize = True
+            Me.label3.Location = New Point(3, &H2E)
+            Me.label3.Name = "label3"
+            Me.label3.Size = New Size(&H24, 13)
+            Me.label3.TabIndex = 5
+            Me.label3.Text = "Level:"
+            Me.label2.AutoSize = True
+            Me.label2.Location = New Point(3, 20)
+            Me.label2.Name = "label2"
+            Me.label2.Size = New Size(&H30, 13)
+            Me.label2.TabIndex = 4
+            Me.label2.Text = "Prestige:"
+            Me.numericUpDown5.Location = New Point(80, &H2C)
+            bits = New Integer(4  - 1) {}
+            bits(0) = -2
+            Me.numericUpDown5.Maximum = New Decimal(bits)
+            bits = New Integer(4  - 1) {}
+            bits(0) = -2
+            bits(3) = -2147483648
+            Me.numericUpDown5.Minimum = New Decimal(bits)
+            Me.numericUpDown5.Name = "numericUpDown5"
+            Me.numericUpDown5.Size = New Size(100, 20)
+            Me.numericUpDown5.TabIndex = 3
+            Me.numericUpDown4.Location = New Point(80, &H12)
+            bits = New Integer(4  - 1) {}
+            bits(0) = -2
+            Me.numericUpDown4.Maximum = New Decimal(bits)
+            bits = New Integer(4  - 1) {}
+            bits(0) = -2
+            bits(3) = -2147483648
+            Me.numericUpDown4.Minimum = New Decimal(bits)
+            Me.numericUpDown4.Name = "numericUpDown4"
+            Me.numericUpDown4.Size = New Size(100, 20)
+            Me.numericUpDown4.TabIndex = 2
+            Me.button29.Location = New Point(&H7B, &H109)
+            Me.button29.Name = "button29"
+            Me.button29.Size = New Size(&H6F, 30)
+            Me.button29.TabIndex = 1
+            Me.button29.Text = "Set Stats"
+            Me.button29.UseVisualStyleBackColor = True
+            AddHandler Me.button29.Click, New EventHandler(AddressOf Me.button29_Click)
+            Me.button28.Location = New Point(6, &H109)
+            Me.button28.Name = "button28"
+            Me.button28.Size = New Size(&H6F, 30)
+            Me.button28.TabIndex = 0
+            Me.button28.Text = "Load Stat"
+            Me.button28.UseVisualStyleBackColor = True
+            AddHandler Me.button28.Click, New EventHandler(AddressOf Me.button28_Click)
+            Me.tabPage3.Controls.Add(Me.groupBox10)
+            Me.tabPage3.Location = New Point(4, &H16)
+            Me.tabPage3.Name = "tabPage3"
+            Me.tabPage3.Size = New Size(&H1B9, &H131)
+            Me.tabPage3.TabIndex = 2
+            Me.tabPage3.Text = "Hud"
+            Me.tabPage3.UseVisualStyleBackColor = True
+            Me.groupBox10.Controls.Add(Me.groupBox13)
+            Me.groupBox10.Controls.Add(Me.groupBox12)
+            Me.groupBox10.Controls.Add(Me.groupBox11)
+            Me.groupBox10.Location = New Point(3, 3)
+            Me.groupBox10.Name = "groupBox10"
+            Me.groupBox10.Size = New Size(&H1B3, &H12B)
+            Me.groupBox10.TabIndex = 0
+            Me.groupBox10.TabStop = False
+            Me.groupBox10.Text = "Hud Elements"
+            Me.groupBox13.Controls.Add(Me.button35)
+            Me.groupBox13.Controls.Add(Me.button36)
+            Me.groupBox13.Controls.Add(Me.textBox8)
+            Me.groupBox13.Location = New Point(6, 20)
+            Me.groupBox13.Name = "groupBox13"
+            Me.groupBox13.Size = New Size(&H1A7, &H57)
+            Me.groupBox13.TabIndex = 2
+            Me.groupBox13.TabStop = False
+            Me.groupBox13.Text = "DoHeart"
+            Me.button35.Location = New Point(&HD7, &H2D)
+            Me.button35.Name = "button35"
+            Me.button35.Size = New Size(&HCA, &H24)
+            Me.button35.TabIndex = 2
+            Me.button35.Text = "Stop"
+            Me.button35.UseVisualStyleBackColor = True
+            AddHandler Me.button35.Click, New EventHandler(AddressOf Me.button35_Click)
+            Me.button36.Location = New Point(6, &H2D)
+            Me.button36.Name = "button36"
+            Me.button36.Size = New Size(&HCA, &H24)
+            Me.button36.TabIndex = 1
+            Me.button36.Text = "Start"
+            Me.button36.UseVisualStyleBackColor = True
+            AddHandler Me.button36.Click, New EventHandler(AddressOf Me.button36_Click)
+            Me.textBox8.Location = New Point(6, &H13)
+            Me.textBox8.Name = "textBox8"
+            Me.textBox8.Size = New Size(&H19B, 20)
+            Me.textBox8.TabIndex = 0
+            AddHandler Me.textBox8.TextChanged, New EventHandler(AddressOf Me.textBox8_TextChanged)
+            Me.groupBox12.Controls.Add(Me.button34)
+            Me.groupBox12.Controls.Add(Me.button33)
+            Me.groupBox12.Controls.Add(Me.textBox7)
+            Me.groupBox12.Location = New Point(6, &H71)
+            Me.groupBox12.Name = "groupBox12"
+            Me.groupBox12.Size = New Size(&H1A7, &H57)
+            Me.groupBox12.TabIndex = 1
+            Me.groupBox12.TabStop = False
+            Me.groupBox12.Text = "Fade In/Out"
+            Me.button34.Enabled = False
+            Me.button34.Location = New Point(&HD7, &H2D)
+            Me.button34.Name = "button34"
+            Me.button34.Size = New Size(&HCA, &H24)
+            Me.button34.TabIndex = 2
+            Me.button34.Text = "Stop"
+            Me.button34.UseVisualStyleBackColor = True
+            Me.button33.Enabled = False
+            Me.button33.Location = New Point(6, &H2D)
+            Me.button33.Name = "button33"
+            Me.button33.Size = New Size(&HCA, &H24)
+            Me.button33.TabIndex = 1
+            Me.button33.Text = "Start"
+            Me.button33.UseVisualStyleBackColor = True
+            Me.textBox7.Enabled = False
+            Me.textBox7.Location = New Point(6, &H13)
+            Me.textBox7.Name = "textBox7"
+            Me.textBox7.Size = New Size(&H19B, 20)
+            Me.textBox7.TabIndex = 0
+            Me.groupBox11.Controls.Add(Me.button32)
+            Me.groupBox11.Controls.Add(Me.button19)
+            Me.groupBox11.Controls.Add(Me.textBox6)
+            Me.groupBox11.Location = New Point(6, &HCE)
+            Me.groupBox11.Name = "groupBox11"
+            Me.groupBox11.Size = New Size(&H1A7, &H57)
+            Me.groupBox11.TabIndex = 0
+            Me.groupBox11.TabStop = False
+            Me.groupBox11.Text = "Scrollbar"
+            Me.button32.Enabled = False
+            Me.button32.Location = New Point(&HD7, &H2D)
+            Me.button32.Name = "button32"
+            Me.button32.Size = New Size(&HCA, &H24)
+            Me.button32.TabIndex = 2
+            Me.button32.Text = "Stop"
+            Me.button32.UseVisualStyleBackColor = True
+            AddHandler Me.button32.Click, New EventHandler(AddressOf Me.button32_Click)
+            Me.button19.Enabled = False
+            Me.button19.Location = New Point(6, &H2D)
+            Me.button19.Name = "button19"
+            Me.button19.Size = New Size(&HCA, &H24)
+            Me.button19.TabIndex = 1
+            Me.button19.Text = "Start"
+            Me.button19.UseVisualStyleBackColor = True
+            AddHandler Me.button19.Click, New EventHandler(AddressOf Me.button19_Click)
+            Me.textBox6.Enabled = False
+            Me.textBox6.Location = New Point(6, &H13)
+            Me.textBox6.Name = "textBox6"
+            Me.textBox6.Size = New Size(&H19B, 20)
+            Me.textBox6.TabIndex = 0
+            Me.tabPage2.Controls.Add(Me.groupbox7)
+            Me.tabPage2.Controls.Add(Me.groupBox6)
+            Me.tabPage2.Controls.Add(Me.groupBox3)
+            Me.tabPage2.Location = New Point(4, &H16)
+            Me.tabPage2.Name = "tabPage2"
+            Me.tabPage2.Padding = New Padding(3)
+            Me.tabPage2.Size = New Size(&H1B9, &H131)
+            Me.tabPage2.TabIndex = 1
+            Me.tabPage2.Text = "Host"
+            Me.tabPage2.UseVisualStyleBackColor = True
+            Me.groupbox7.Controls.Add(Me.button25)
+            Me.groupbox7.Controls.Add(Me.comboBox1)
+            Me.groupbox7.Location = New Point(3, 150)
+            Me.groupbox7.Name = "groupbox7"
+            Me.groupbox7.Size = New Size(&H1AF, &H31)
+            Me.groupbox7.TabIndex = 2
+            Me.groupbox7.TabStop = False
+            Me.groupbox7.Text = "Weapons"
+            Me.button25.Location = New Point(&H13A, 13)
+            Me.button25.Name = "button25"
+            Me.button25.Size = New Size(&H6F, 30)
+            Me.button25.TabIndex = 5
+            Me.button25.Text = "Give Weapon"
+            Me.button25.UseVisualStyleBackColor = True
+            AddHandler Me.button25.Click, New EventHandler(AddressOf Me.button25_Click)
+            Me.comboBox1.FormattingEnabled = True
+            Me.comboBox1.Items.AddRange(New Object() { "defaultweapon_mp", "mp7_mp", "pdw57_mp", "vector_mp", "insas_mp", "qcw05_mp", "evoskorpion_mp", "peacekeeper_mp", "tar21_mp", "type95_mp", "sig556_mp", "sa58_mp", "hk416_mp", "scar_mp", "saritch_mp", "xm8_mp", "an94_mp", "870mcs_mp", "saiga12_mp", "ksg_mp", "srm1216_mp", "mk48_mp", "qbb95_mp", "lsat_mp", "hamr_mp", "svu_mp", "dsr50_mp", "ballista_mp", "as50_mp", "kard_dw_mp", "fnp45_dw_mp", "fiveseven_dw_mp", "judge_dw_mp", "beretta93r_dw_mp", "fiveseven_mp", "fnp45_mp", "beretta93r_mp", "judge_mp", "kard_mp", "m32_mp", "smaw_mp", "fhj18_mp", "usrpg_mp", "knife_held_mp", "minigun_mp", "riotshield_mp", "crossbow_mp", "knife_ballistic_mp", "frag_grenade_mp", "concussion_grenade_mp", "sticky_grenade_mp", "willy_pete_mp", "hatchet_mp", "sensor_grenade_mp", "bouncingbetty_mp", "emp_grenade_mp", "satchel_charge_mp", "proximity_grenade_mp", "claymore_mp", "pda_hack_mp", "flash_grenade_mp", "trophy_system_mp", "tactical_insertion_mp", "destructible_car_mp", "explodable_barrel_mp", "vcs_controller_mp", "knife_mp", "dogs_mp", "dog_bite_mp", "explosive_bolt_mp", "scavenger_item_mp", "scavenger_item_hack_mp", "smoke_center_mp", "proximity_grenade_aoe_mp", "briefcase_bomb_mp", "briefcase_bomb_defuse_mp", "cobra_20mm_mp", "inventory_supplydrop_mp", "supplydrop_mp", "ai_tank_drone_rocket_mp", "ai_tank_drone_gun_mp", "killstreak_ai_tank_mp", "inventory_ai_tank_drop_mp", "ai_tank_drop_mp", "radar_mp", "counteruav_mp", "radardirection_mp", "emp_mp", "cobra_20mm_comlink_mp", "heli_gunner_rockets_mp", "littlebird_guard_minigun_mp", "helicopter_comlink_mp", "helicopter_guard_mp", "helicopter_player_gunner_mp", "chopper_minigun_mp", "inventory_minigun_mp", "inventory_m32_mp", "missile_drone_projectile_mp", "inventory_missile_drone_mp", "missile_drone_mp", "missile_swarm_projectile_mp", "missile_swarm_mp", "planemortar_mp", "rc_car_weapon_mp", "rcbomb_mp", "remote_missile_missile_mp", "remote_missile_bomblet_mp", "remote_missile_mp", "remote_mortar_missile_mp", "remote_mortar_mp", "qrdrone_turret_mp", "killstreak_qrdrone_mp", "straferun_gun_mp", "straferun_rockets_mp", "straferun_mp", "auto_gun_turret_mp", "microwave_turret_mp", "killstreak_remote_turret_mp", "autoturret_mp", "turret_drop_mp", "microwaveturret_mp", "microwaveturret_drop_mp", "defaultweapon_mp", "ak74u_zm", "mp5k_zm", "qcw05_zm", "ak74u_upgraded_zm", "mp5k_upgraded_zm", "qcw05_upgraded_zm", "m14_zm", "m16_zm", "saritch_zm", "xm8_zm", "type95_zm", "tar21_zm", "m14_upgraded_zm", "m16_gl_upgraded_zm", "saritch_upgraded_zm", "xm8_upgraded_zm", "type95_upgraded_zm", "tar21_upgraded_zm", "870mcs_zm", "rottweil72_zm", "saiga12_zm", "srm1216_zm", "870mcs_upgraded_zm", "rottweil72_upgraded_zm", "saiga12_upgraded_zm", "srm1216_upgraded_zm", "galil_zm", "fnfal_zm", "rpd_zm", "hamr_zm", "galil_upgraded_zm", "fnfal_upgraded_zm", "rpd_upgraded_zm", "hamr_upgraded_zm", "dsr50_zm", "barretm82_zm", "dsr50_upgraded_zm", "barretm82_upgraded_zm", "knife_zm", "m1911_zm", "python_zm", "judge_zm", "kard_zm", "fiveseven_zm", "beretta93r_zm", "fivesevendw_zm", "m1911_upgraded_zm", "python_upgraded_zm", "judge_upgraded_zm", "kard_upgraded_zm", "fiveseven_upgraded_zm", "beretta93r_upgraded_zm", "fivesevendw_upgraded_zm", "usrpg_zm", "m32_zm", "usrpg_upgraded_zm", "m32_upgraded_zm", "ray_gun_zm", "jetgun_zm", "riotshield_zm", "tazer_knuckles_zm", "knife_ballistic_zm", "knife_ballistic_upgraded_zm", "frag_grenade_zm", "sticky_grenade_zm", "cymbal_monkey_zm", "emp_grenade_zm", "claymore_zm", "screecher_arms_zm", "ray_gun_upgraded_zm", "knife_ballistic_no_melee_zm", "knife_ballistic_no_melee_upgraded_zm", "knife_ballistic_bowie_zm", "knife_ballistic_bowie_upgraded_zm", "equip_turbine_zm", "equip_turret_zm", "equip_electrictrap_zm", "zombie_builder_zm", "buildable_piece_zm", "syrette_zm", "zombie_knuckle_crack", "zombie_perk_bottle_doubletap", "zombie_perk_bottle_jugg", "zombie_perk_bottle_marathon", "zombie_perk_bottle_revive", "zombie_perk_bottle_sleight", "zombie_perk_bottle_tombstone", "bowie_knife_zm", "zombie_fists_zm", "zombie_tazer_flourish", "zombie_bowie_flourish", "death_throe_zm", "death_self_zm", "equip_turbine_zm_turret", "zombie_bullet_crouch_zm", "equip_turret_zm_turret", "equip_electrictrap_zm_turret", "minigun_alcatraz_zm", "electrocuted_hands_zm", "minigun_alcatraz_upgraded_zm", "blundergat_zm", "blundergat_upgraded_zm", "knife_zm_alcatraz", "lightning_hands_zm", "spoon_zm_alcatraz", "spork_zm_alcatraz", "blundersplat", "bouncing_tomahawk", "blundersplat_upgraded", "upgraded_tomahawk", "ak47_zm", "uzi_zm", "ak47_upgraded_zm", "uzi_upgraded_zm", "thompson_upgraded_zm", "jetgun_zm", "riotshield_zm", "hk416_zm", "lsat_zm", "hk416_upgraded_zm", "lsat_upgraded_zm", "an94_zm", "pdw57_zm", "svu_zm", "an94_upgraded_zm", "pdw57_upgraded_zm", "svu_upgraded_zm", "slipgun_zm" })
+            Me.comboBox1.Location = New Point(3, &H13)
+            Me.comboBox1.Name = "comboBox1"
+            Me.comboBox1.Size = New Size(&H131, &H15)
+            Me.comboBox1.TabIndex = 0
+            Me.groupBox6.Controls.Add(Me.button50)
+            Me.groupBox6.Controls.Add(Me.button46)
+            Me.groupBox6.Controls.Add(Me.button30)
+            Me.groupBox6.Controls.Add(Me.button27)
+            Me.groupBox6.Controls.Add(Me.button26)
+            Me.groupBox6.Controls.Add(Me.button21)
+            Me.groupBox6.Controls.Add(Me.textBox5)
+            Me.groupBox6.Controls.Add(Me.button20)
+            Me.groupBox6.Location = New Point(3, 3)
+            Me.groupBox6.Name = "groupBox6"
+            Me.groupBox6.Size = New Size(&H1B0, &H8D)
+            Me.groupBox6.TabIndex = 1
+            Me.groupBox6.TabStop = False
+            Me.groupBox6.Text = "All Client"
+            Me.button50.Enabled = False
+            Me.button50.Location = New Point(&H138, &H37)
+            Me.button50.Name = "button50"
+            Me.button50.Size = New Size(&H6F, 30)
+            Me.button50.TabIndex = 11
+            Me.button50.Text = "Ban"
+            Me.button50.UseVisualStyleBackColor = True
+            AddHandler Me.button50.Click, New EventHandler(AddressOf Me.button50_Click)
+            Me.button46.Enabled = False
+            Me.button46.Location = New Point(&H138, &H13)
+            Me.button46.Name = "button46"
+            Me.button46.Size = New Size(&H6F, 30)
+            Me.button46.TabIndex = 10
+            Me.button46.Text = "Temp Ban"
+            Me.button46.UseVisualStyleBackColor = True
+            AddHandler Me.button46.Click, New EventHandler(AddressOf Me.button46_Click)
+            Me.button30.Location = New Point(&H9F, &H37)
+            Me.button30.Name = "button30"
+            Me.button30.Size = New Size(&H6F, 30)
+            Me.button30.TabIndex = 9
+            Me.button30.Text = "Force Host"
+            Me.button30.UseVisualStyleBackColor = True
+            AddHandler Me.button30.Click, New EventHandler(AddressOf Me.button30_Click)
+            Me.button27.Location = New Point(&H9F, &H13)
+            Me.button27.Name = "button27"
+            Me.button27.Size = New Size(&H6F, 30)
+            Me.button27.TabIndex = 8
+            Me.button27.Text = "God Mode"
+            Me.button27.UseVisualStyleBackColor = True
+            AddHandler Me.button27.Click, New EventHandler(AddressOf Me.button27_Click)
+            Me.button26.Location = New Point(6, &H37)
+            Me.button26.Name = "button26"
+            Me.button26.Size = New Size(&H6F, 30)
+            Me.button26.TabIndex = 7
+            Me.button26.Text = "Unlimited Ammo"
+            Me.button26.UseVisualStyleBackColor = True
+            AddHandler Me.button26.Click, New EventHandler(AddressOf Me.button26_Click)
+            Me.button21.Location = New Point(&H13B, &H69)
+            Me.button21.Name = "button21"
+            Me.button21.Size = New Size(&H6F, 30)
+            Me.button21.TabIndex = 6
+            Me.button21.Text = "Jump Height"
+            Me.button21.UseVisualStyleBackColor = True
+            AddHandler Me.button21.Click, New EventHandler(AddressOf Me.button21_Click)
+            Me.textBox5.Location = New Point(6, &H69)
+            Me.textBox5.Name = "textBox5"
+            Me.textBox5.Size = New Size(&H12F, 20)
+            Me.textBox5.TabIndex = 5
+            AddHandler Me.textBox5.TextChanged, New EventHandler(AddressOf Me.textBox5_TextChanged)
+            Me.button20.Location = New Point(6, &H13)
+            Me.button20.Name = "button20"
+            Me.button20.Size = New Size(&H6F, 30)
+            Me.button20.TabIndex = 0
+            Me.button20.Text = "No Fall Damage"
+            Me.button20.UseVisualStyleBackColor = True
+            AddHandler Me.button20.Click, New EventHandler(AddressOf Me.button20_Click)
+            Me.groupBox3.Controls.Add(Me.button14)
+            Me.groupBox3.Controls.Add(Me.textBox4)
+            Me.groupBox3.Controls.Add(Me.button13)
+            Me.groupBox3.Controls.Add(Me.textBox1)
+            Me.groupBox3.Location = New Point(3, &HCD)
+            Me.groupBox3.Name = "groupBox3"
+            Me.groupBox3.Size = New Size(&H1B0, &H5E)
+            Me.groupBox3.TabIndex = 0
+            Me.groupBox3.TabStop = False
+            Me.groupBox3.Text = "Custom Commands"
+            Me.button14.Location = New Point(&H13B, &H37)
+            Me.button14.Name = "button14"
+            Me.button14.Size = New Size(&H6F, 30)
+            Me.button14.TabIndex = 4
+            Me.button14.Text = "Console Command"
+            Me.button14.UseVisualStyleBackColor = True
+            AddHandler Me.button14.Click, New EventHandler(AddressOf Me.button14_Click)
+            Me.textBox4.Location = New Point(6, &H37)
+            Me.textBox4.Name = "textBox4"
+            Me.textBox4.Size = New Size(&H12F, 20)
+            Me.textBox4.TabIndex = 4
+            Me.button13.Location = New Point(&H13B, &H13)
+            Me.button13.Name = "button13"
+            Me.button13.Size = New Size(&H6F, 30)
+            Me.button13.TabIndex = 3
+            Me.button13.Text = "Server Command"
+            Me.button13.UseVisualStyleBackColor = True
+            AddHandler Me.button13.Click, New EventHandler(AddressOf Me.button13_Click)
+            Me.textBox1.Location = New Point(6, &H13)
+            Me.textBox1.Name = "textBox1"
+            Me.textBox1.Size = New Size(&H12F, 20)
+            Me.textBox1.TabIndex = 0
+            Me.tabPage1.Controls.Add(Me.checkBox1)
+            Me.tabPage1.Controls.Add(Me.groupBox4)
+            Me.tabPage1.Controls.Add(Me.groupBox1)
+            Me.tabPage1.Location = New Point(4, &H16)
+            Me.tabPage1.Name = "tabPage1"
+            Me.tabPage1.Padding = New Padding(3)
+            Me.tabPage1.Size = New Size(&H1B9, &H131)
+            Me.tabPage1.TabIndex = 0
+            Me.tabPage1.Text = "Client"
+            Me.tabPage1.UseVisualStyleBackColor = True
+            Me.checkBox1.AutoSize = True
+            Me.checkBox1.Location = New Point(&H13F, &HD3)
+            Me.checkBox1.Name = "checkBox1"
+            Me.checkBox1.Size = New Size(&H65, &H11)
+            Me.checkBox1.TabIndex = 2
+            Me.checkBox1.Text = "Teleport all loop"
+            Me.checkBox1.UseVisualStyleBackColor = True
+            AddHandler Me.checkBox1.CheckedChanged, New EventHandler(AddressOf Me.checkBox1_CheckedChanged)
+            Me.groupBox4.Controls.Add(Me.button11)
+            Me.groupBox4.Controls.Add(Me.button10)
+            Me.groupBox4.Controls.Add(Me.textBox3)
+            Me.groupBox4.Controls.Add(Me.textBox2)
+            Me.groupBox4.Location = New Point(6, &HD3)
+            Me.groupBox4.Name = "groupBox4"
+            Me.groupBox4.Size = New Size(&H133, &H58)
+            Me.groupBox4.TabIndex = 1
+            Me.groupBox4.TabStop = False
+            Me.groupBox4.Text = "User"
+            Me.button11.Location = New Point(190, &H34)
+            Me.button11.Name = "button11"
+            Me.button11.Size = New Size(&H6F, 30)
+            Me.button11.TabIndex = 3
+            Me.button11.Text = "Set Clantag"
+            Me.button11.UseVisualStyleBackColor = True
+            AddHandler Me.button11.Click, New EventHandler(AddressOf Me.button11_Click)
+            Me.button10.Location = New Point(190, &H13)
+            Me.button10.Name = "button10"
+            Me.button10.Size = New Size(&H6F, 30)
+            Me.button10.TabIndex = 2
+            Me.button10.Text = "Set Gamertag"
+            Me.button10.UseVisualStyleBackColor = True
+            AddHandler Me.button10.Click, New EventHandler(AddressOf Me.button10_Click)
+            Me.textBox3.Location = New Point(6, &H34)
+            Me.textBox3.Name = "textBox3"
+            Me.textBox3.Size = New Size(&HB2, 20)
+            Me.textBox3.TabIndex = 1
+            Me.textBox2.Location = New Point(6, &H13)
+            Me.textBox2.Name = "textBox2"
+            Me.textBox2.Size = New Size(&HB2, 20)
+            Me.textBox2.TabIndex = 0
+            AddHandler Me.textBox2.TextChanged, New EventHandler(AddressOf Me.textBox2_TextChanged)
+            Me.groupBox1.Controls.Add(Me.button24)
+            Me.groupBox1.Controls.Add(Me.button23)
+            Me.groupBox1.Controls.Add(Me.button22)
+            Me.groupBox1.Controls.Add(Me.button18)
+            Me.groupBox1.Controls.Add(Me.groupBox5)
+            Me.groupBox1.Controls.Add(Me.button9)
+            Me.groupBox1.Controls.Add(Me.button12)
+            Me.groupBox1.Controls.Add(Me.button8)
+            Me.groupBox1.Controls.Add(Me.button4)
+            Me.groupBox1.Controls.Add(Me.button3)
+            Me.groupBox1.Location = New Point(6, 6)
+            Me.groupBox1.Name = "groupBox1"
+            Me.groupBox1.Size = New Size(&H1AD, &HC7)
+            Me.groupBox1.TabIndex = 0
+            Me.groupBox1.TabStop = False
+            Me.groupBox1.Text = "PlayerState"
+            Me.button24.Location = New Point(&H138, &H5B)
+            Me.button24.Name = "button24"
+            Me.button24.Size = New Size(&H6F, 30)
+            Me.button24.TabIndex = 9
+            Me.button24.Text = "Invisiblity"
+            Me.button24.UseVisualStyleBackColor = True
+            AddHandler Me.button24.Click, New EventHandler(AddressOf Me.button24_Click)
+            Me.button23.Location = New Point(&H138, &H37)
+            Me.button23.Name = "button23"
+            Me.button23.Size = New Size(&H6F, 30)
+            Me.button23.TabIndex = 8
+            Me.button23.Text = "Score/Points"
+            Me.button23.UseVisualStyleBackColor = True
+            AddHandler Me.button23.Click, New EventHandler(AddressOf Me.button23_Click)
+            Me.button22.Location = New Point(&H138, &H13)
+            Me.button22.Name = "button22"
+            Me.button22.Size = New Size(&H6F, 30)
+            Me.button22.TabIndex = 7
+            Me.button22.Text = "FOV"
+            Me.button22.UseVisualStyleBackColor = True
+            AddHandler Me.button22.Click, New EventHandler(AddressOf Me.button22_Click)
+            Me.button18.Location = New Point(&H9F, &H5B)
+            Me.button18.Name = "button18"
+            Me.button18.Size = New Size(&H6F, 30)
+            Me.button18.TabIndex = 6
+            Me.button18.Text = "Movement"
+            Me.button18.UseVisualStyleBackColor = True
+            AddHandler Me.button18.Click, New EventHandler(AddressOf Me.button18_Click)
+            Me.groupBox5.Controls.Add(Me.button17)
+            Me.groupBox5.Controls.Add(Me.button16)
+            Me.groupBox5.Controls.Add(Me.button15)
+            Me.groupBox5.Controls.Add(Me.numericUpDown3)
+            Me.groupBox5.Controls.Add(Me.numericUpDown2)
+            Me.groupBox5.Controls.Add(Me.numericUpDown1)
+            Me.groupBox5.Location = New Point(6, 140)
+            Me.groupBox5.Name = "groupBox5"
+            Me.groupBox5.Size = New Size(&H1A1, &H35)
+            Me.groupBox5.TabIndex = 5
+            Me.groupBox5.TabStop = False
+            Me.groupBox5.Text = "Origin"
+            Me.button17.Location = New Point(330, &H13)
+            Me.button17.Name = "button17"
+            Me.button17.Size = New Size(&H51, 30)
+            Me.button17.TabIndex = 7
+            Me.button17.Text = "Teleport All"
+            Me.button17.UseVisualStyleBackColor = True
+            AddHandler Me.button17.Click, New EventHandler(AddressOf Me.button17_Click)
+            Me.button16.Location = New Point(&H105, &H13)
+            Me.button16.Name = "button16"
+            Me.button16.Size = New Size(&H3F, 30)
+            Me.button16.TabIndex = 6
+            Me.button16.Text = "Set"
+            Me.button16.UseVisualStyleBackColor = True
+            AddHandler Me.button16.Click, New EventHandler(AddressOf Me.button16_Click)
+            Me.button15.Location = New Point(&HC0, &H13)
+            Me.button15.Name = "button15"
+            Me.button15.Size = New Size(&H3F, 30)
+            Me.button15.TabIndex = 5
+            Me.button15.Text = "Get"
+            Me.button15.UseVisualStyleBackColor = True
+            AddHandler Me.button15.Click, New EventHandler(AddressOf Me.button15_Click)
+            Me.numericUpDown3.DecimalPlaces = 2
+            Me.numericUpDown3.Location = New Point(130, &H13)
+            bits = New Integer(4  - 1) {}
+            bits(0) = &H2710
+            Me.numericUpDown3.Maximum = New Decimal(bits)
+            bits = New Integer(4  - 1) {}
+            bits(0) = &H2710
+            bits(3) = -2147483648
+            Me.numericUpDown3.Minimum = New Decimal(bits)
+            Me.numericUpDown3.Name = "numericUpDown3"
+            Me.numericUpDown3.Size = New Size(&H38, 20)
+            Me.numericUpDown3.TabIndex = 2
+            Me.numericUpDown2.DecimalPlaces = 2
+            Me.numericUpDown2.Location = New Point(&H44, &H13)
+            bits = New Integer(4  - 1) {}
+            bits(0) = &H2710
+            Me.numericUpDown2.Maximum = New Decimal(bits)
+            bits = New Integer(4  - 1) {}
+            bits(0) = &H2710
+            bits(3) = -2147483648
+            Me.numericUpDown2.Minimum = New Decimal(bits)
+            Me.numericUpDown2.Name = "numericUpDown2"
+            Me.numericUpDown2.Size = New Size(&H38, 20)
+            Me.numericUpDown2.TabIndex = 1
+            Me.numericUpDown1.DecimalPlaces = 2
+            Me.numericUpDown1.Location = New Point(6, &H13)
+            bits = New Integer(4  - 1) {}
+            bits(0) = &H2710
+            Me.numericUpDown1.Maximum = New Decimal(bits)
+            bits = New Integer(4  - 1) {}
+            bits(0) = &H2710
+            bits(3) = -2147483648
+            Me.numericUpDown1.Minimum = New Decimal(bits)
+            Me.numericUpDown1.Name = "numericUpDown1"
+            Me.numericUpDown1.Size = New Size(&H38, 20)
+            Me.numericUpDown1.TabIndex = 0
+            Me.button9.Location = New Point(6, &H5B)
+            Me.button9.Name = "button9"
+            Me.button9.Size = New Size(&H6F, 30)
+            Me.button9.TabIndex = 4
+            Me.button9.Text = "Infrared"
+            Me.button9.UseVisualStyleBackColor = True
+            AddHandler Me.button9.Click, New EventHandler(AddressOf Me.button9_Click_1)
+            Me.button12.Location = New Point(&H9F, &H37)
+            Me.button12.Name = "button12"
+            Me.button12.Size = New Size(&H6F, 30)
+            Me.button12.TabIndex = 3
+            Me.button12.Text = "God Mode"
+            Me.button12.UseVisualStyleBackColor = True
+            AddHandler Me.button12.Click, New EventHandler(AddressOf Me.button12_Click)
+            Me.button8.Location = New Point(&H9F, &H13)
+            Me.button8.Name = "button8"
+            Me.button8.Size = New Size(&H6F, 30)
+            Me.button8.TabIndex = 2
+            Me.button8.Text = "Give Killsreaks"
+            Me.button8.UseVisualStyleBackColor = True
+            AddHandler Me.button8.Click, New EventHandler(AddressOf Me.button8_Click)
+            Me.button4.Location = New Point(6, &H37)
+            Me.button4.Name = "button4"
+            Me.button4.Size = New Size(&H6F, 30)
+            Me.button4.TabIndex = 1
+            Me.button4.Text = "Empty Ammo"
+            Me.button4.UseVisualStyleBackColor = True
+            AddHandler Me.button4.Click, New EventHandler(AddressOf Me.button4_Click)
+            Me.button3.Location = New Point(6, &H13)
+            Me.button3.Name = "button3"
+            Me.button3.Size = New Size(&H6F, 30)
+            Me.button3.TabIndex = 0
+            Me.button3.Text = "Max Ammo"
+            Me.button3.UseVisualStyleBackColor = True
+            AddHandler Me.button3.Click, New EventHandler(AddressOf Me.button3_Click)
+            Me.tabControl1.Controls.Add(Me.tabPage1)
+            Me.tabControl1.Controls.Add(Me.tabPage2)
+            Me.tabControl1.Controls.Add(Me.tabPage3)
+            Me.tabControl1.Controls.Add(Me.tabPage4)
+            Me.tabControl1.Controls.Add(Me.tabPage7)
+            Me.tabControl1.Controls.Add(Me.tabPage5)
+            Me.tabControl1.Controls.Add(Me.tabPage6)
+            Me.tabControl1.Location = New Point(&H8D, &H1B)
+            Me.tabControl1.Name = "tabControl1"
+            Me.tabControl1.SelectedIndex = 0
+            Me.tabControl1.Size = New Size(&H1C1, &H14B)
+            Me.tabControl1.TabIndex = 3
+            MyBase.AutoScaleDimensions = New SizeF(6!, 13!)
+            MyBase.AutoScaleMode = AutoScaleMode.Font
+            MyBase.ClientSize = New Size(&H25A, 520)
+            MyBase.Controls.Add(Me.groupBox17)
+            MyBase.Controls.Add(Me.tabControl1)
+            MyBase.Controls.Add(Me.button2)
+            MyBase.Controls.Add(Me.button1)
+            MyBase.Controls.Add(Me.listBox1)
+            MyBase.Controls.Add(Me.menuStrip1)
+            Me.ForeColor = Color.Black
+            MyBase.FormBorderStyle = FormBorderStyle.Fixed3D
+            MyBase.Icon = DirectCast(manager.GetObject("$this.Icon"), Icon)
+            MyBase.MainMenuStrip = Me.menuStrip1
+            MyBase.MaximizeBox = False
+            MyBase.Name = "Form1"
+            MyBase.SizeGripStyle = SizeGripStyle.Hide
+            MyBase.StartPosition = FormStartPosition.CenterParent
+            Me.Text = "FiFA - Fame is for assholes"
+            AddHandler MyBase.Load, New EventHandler(AddressOf Me.Form1_Load)
+            Me.contextMenuStrip1.ResumeLayout(False)
+            Me.menuStrip1.ResumeLayout(False)
+            Me.menuStrip1.PerformLayout
+            Me.tabPage6.ResumeLayout(False)
+            Me.tabPage5.ResumeLayout(False)
+            Me.groupBox2.ResumeLayout(False)
+            Me.tabPage7.ResumeLayout(False)
+            Me.groupBox16.ResumeLayout(False)
+            Me.groupBox16.PerformLayout
+            Me.groupBox14.ResumeLayout(False)
+            Me.groupBox15.ResumeLayout(False)
+            Me.groupBox9.ResumeLayout(False)
+            Me.groupBox9.PerformLayout
+            Me.tabPage4.ResumeLayout(False)
+            Me.groupBox8.ResumeLayout(False)
+            Me.groupBox8.PerformLayout
+            Me.numericUpDown13.EndInit
+            Me.numericUpDown12.EndInit
+            Me.numericUpDown11.EndInit
+            Me.numericUpDown10.EndInit
+            Me.numericUpDown9.EndInit
+            Me.numericUpDown8.EndInit
+            Me.numericUpDown7.EndInit
+            Me.numericUpDown6.EndInit
+            Me.numericUpDown5.EndInit
+            Me.numericUpDown4.EndInit
+            Me.tabPage3.ResumeLayout(False)
+            Me.groupBox10.ResumeLayout(False)
+            Me.groupBox13.ResumeLayout(False)
+            Me.groupBox13.PerformLayout
+            Me.groupBox12.ResumeLayout(False)
+            Me.groupBox12.PerformLayout
+            Me.groupBox11.ResumeLayout(False)
+            Me.groupBox11.PerformLayout
+            Me.tabPage2.ResumeLayout(False)
+            Me.groupbox7.ResumeLayout(False)
+            Me.groupBox6.ResumeLayout(False)
+            Me.groupBox6.PerformLayout
+            Me.groupBox3.ResumeLayout(False)
+            Me.groupBox3.PerformLayout
+            Me.tabPage1.ResumeLayout(False)
+            Me.tabPage1.PerformLayout
+            Me.groupBox4.ResumeLayout(False)
+            Me.groupBox4.PerformLayout
+            Me.groupBox1.ResumeLayout(False)
+            Me.groupBox5.ResumeLayout(False)
+            Me.numericUpDown3.EndInit
+            Me.numericUpDown2.EndInit
+            Me.numericUpDown1.EndInit
+            Me.tabControl1.ResumeLayout(False)
+            MyBase.ResumeLayout(False)
+            MyBase.PerformLayout
+        End Sub
+
+        Private Sub listBox1_SelectedIndexChanged(ByVal sender As Object, ByVal e As EventArgs)
+            Me.textBox2.Text = Me.getGamertag(Me.listBox1.SelectedIndex)
+            Dim memory As Byte() = Me.Console.GetMemory((Me.getPlayerState(Me.listBox1.SelectedIndex) + &H55A0), 8)
+            memory.Reverse(Of Byte)()
+            Me.textBox3.Text = Encoding.ASCII.GetString(memory)
+        End Sub
+
+        Public Sub MaxAmmo(ByVal Client As Integer)
+            Me.Console.SetMemory((Me.getPlayerState(Client) + &H430), New Byte() { &HFF, &HFF })
+            Me.Console.SetMemory((Me.getPlayerState(Client) + &H42A), New Byte() { &HFF, &HFF })
+            Me.Console.SetMemory((Me.getPlayerState(Client) + &H43E), New Byte() { &HFF, &HFF })
+            Me.Console.SetMemory((Me.getPlayerState(Client) + &H402), New Byte() { &HFF, &HFF })
+            Me.Console.SetMemory((Me.getPlayerState(Client) + &H43A), New Byte() { &HFF, &HFF })
+            Me.Console.SetMemory((Me.getPlayerState(Client) + &H3FE), New Byte() { &HFF, &HFF })
+            Me.Console.SetMemory((Me.getPlayerState(Client) + &H412), New Byte() { &HFF, &HFF })
+            Me.Console.SetMemory((Me.getPlayerState(Client) + &H446), New Byte() { &HFF, &HFF })
+            Me.Console.SetMemory((Me.getPlayerState(Client) + &H442), New Byte() { &HFF, &HFF })
+        End Sub
+
+        Private Sub maxDeathsToolStripMenuItem_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Dim array As Byte() = New Byte(4  - 1) {}
+            array = BitConverter.GetBytes(&H1869F)
+            Array.Reverse(array)
+            Me.Console.SetMemory((Me.getPlayerState(Me.listBox1.SelectedIndex) + &H55E4), array)
+        End Sub
+
+        Private Sub maxKillsToolStripMenuItem_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Dim array As Byte() = New Byte(4  - 1) {}
+            array = BitConverter.GetBytes(&H1869F)
+            Array.Reverse(array)
+            Me.Console.SetMemory((Me.getPlayerState(Me.listBox1.SelectedIndex) + &H55CC), array)
+        End Sub
+
+        Private Sub maxScoreToolStripMenuItem_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Dim array As Byte() = New Byte(4  - 1) {}
+            array = BitConverter.GetBytes(&H1869F)
+            Array.Reverse(array)
+            Me.Console.SetMemory((Me.getPlayerState(Me.listBox1.SelectedIndex) + &H55C8), array)
+        End Sub
+
+        Public Sub MoveOverTime(ByVal Elem As UInt32, ByVal Time As Short, ByVal X As Single, ByVal Y As Single)
+            Me.Console.WriteUInt32((Elem + &H2C), Me.Console.ReadUInt32(&H83537B98))
+            Me.Console.WriteUInt16((Elem + 110), Me.Console.ReadUInt16((Elem + &H72)))
+            Me.Console.WriteFloat((Elem + &H24), Me.Console.ReadFloat(Elem))
+            Me.Console.WriteFloat((Elem + 40), Me.Console.ReadFloat((Elem + 4)))
+            Me.Console.WriteInt16((Elem + &H5E), Time)
+            Me.Console.WriteFloat(Elem, X)
+            Me.Console.WriteFloat((Elem + 4), Y)
+        End Sub
+
+        Private Sub NewsBar_Elapsed(ByVal sender As Object, ByVal e As ElapsedEventArgs)
+            If (Me.NewsClient > &H11) Then
+                Me.NewsClient = 0
+                If (Me.fontSize < 0!) Then
+                    Me.fontSize = (Me.fontSize - 10!)
+                    If (Me.fontSize < -1000!) Then
+                        Me.fontSize = 1000!
+                    End If
+                ElseIf (Me.fontSize > -1!) Then
+                    Me.fontSize = (Me.fontSize - 10!)
+                End If
+            End If
+            Me.setText(Me.NewsClient, Me.NewsbarText(Me.NewsClient), Me.NewsText, 1, 2!, Me.fontSize, 0!, &H9A, 5, 0, 0, 0, 0)
+            Me.NewsClient += 1
+        End Sub
+
+        Private Sub offToolStripMenuItem_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.StealthMode = False
+        End Sub
+
+        Private Sub offToolStripMenuItem1_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.Console.WriteUInt32((Me.getPlayerState(Me.listBox1.SelectedIndex) + &H1E8), 0)
+            Me.Console.WriteUInt32((Me.getPlayerState(Me.listBox1.SelectedIndex) + &H1EC), 2)
+            If Not Me.StealthMode Then
+                Me.Console.Call(&H8242D730, New Object() { Me.listBox1.SelectedIndex, 0, "; ""^3Spread Override: ^1Off""" })
+            End If
+        End Sub
+
+        Private Sub onToolStripMenuItem_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.StealthMode = True
+        End Sub
+
+        Private Sub onToolStripMenuItem1_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.Console.WriteUInt32((Me.getPlayerState(Me.listBox1.SelectedIndex) + &H1EC), 1)
+            Me.Console.WriteFloat((Me.getPlayerState(Me.listBox1.SelectedIndex) + &H588), 255!)
+            If Not Me.StealthMode Then
+                Me.Console.Call(&H8242D730, New Object() { Me.listBox1.SelectedIndex, 0, "; ""^3Spread Override: ^2On""" })
+            End If
+        End Sub
+
+        Public Sub QuickNop(ByVal Offset As UInt32)
+            Dim data As Byte() = New Byte(4  - 1) {}
+            data(0) = &H60
+            Me.Console.SetMemory(Offset, data)
+        End Sub
+
+        Public Sub RadarOn()
+            Dim data As Byte() = New Byte(4  - 1) {}
+            data(0) = &H38
+            data(1) = &H60
+            Me.Console.SetMemory(&H821B8CAC, data)
+        End Sub
+
+        Public Function ReverseBytes(ByVal inArray As Byte()) As Byte()
+            Dim index As Integer = (inArray.Length - 1)
+            Dim i As Integer
+            For i = 0 To (inArray.Length / 2) - 1
+                Dim num As Byte = inArray(i)
+                inArray(i) = inArray(index)
+                inArray(index) = num
+                index -= 1
+            Next i
+            Return inArray
+        End Function
+
+        Public Sub SetAmmo(ByVal Client As Integer, ByVal Value As Integer)
+            Dim bytes As Byte() = BitConverter.GetBytes(Value)
+            Array.Reverse(bytes)
+            Me.Console.SetMemory((Me.getPlayerState(Client) + &H400), bytes)
+            Me.Console.SetMemory((Me.getPlayerState(Client) + &H438), bytes)
+            Me.Console.SetMemory((Me.getPlayerState(Client) + &H43C), bytes)
+            Me.Console.SetMemory((Me.getPlayerState(Client) + &H2E40), bytes)
+            Me.Console.SetMemory((Me.getPlayerState(Client) + &H3FC), bytes)
+        End Sub
+
+        Private Sub SetCamo_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.Console.WriteByte((Me.getPlayerState(Me.listBox1.SelectedIndex) + &H2BF), CByte(Me.camoToolStripMenuItem.DropDown.Items.IndexOf(DirectCast(sender, ToolStripMenuItem))))
+            Me.Console.WriteByte((Me.getPlayerState(Me.listBox1.SelectedIndex) + &H2DB), CByte(Me.camoToolStripMenuItem.DropDown.Items.IndexOf(DirectCast(sender, ToolStripMenuItem))))
+            Me.Console.Call(&H8242D730, New Object() { 0, ("^3Camo: ^7" & sender.ToString) })
+        End Sub
+
+        Public Sub SetHealth(ByVal Client As Integer, ByVal Value As Integer)
+            Dim bytes As Byte() = BitConverter.GetBytes(Value)
+            bytes.Reverse(Of Byte)()
+            Me.Console.SetMemory((Me.getPlayerState(Client) + &H2C43), bytes)
+        End Sub
+
+        Public Sub setIcon(ByVal client As Integer, ByVal elem As UInt32, ByVal shader As UInt32, ByVal relativeOffset As UInt32, ByVal width As Integer, ByVal height As Integer, ByVal x As Single, ByVal y As Single, ByVal align As UInt32, ByVal Optional r As Integer = &HFF, ByVal Optional g As Integer = &HFF, ByVal Optional b As Integer = &HFF, ByVal Optional a As Integer = &HFF)
+            Me.Console.WriteInt16((elem + &H54), CShort(width))
+            Me.Console.WriteInt16((elem + &H56), CShort(height))
+            Me.Console.WriteFloat(elem, x)
+            Me.Console.WriteFloat((elem + 4), y)
+            Me.Console.SetMemory((elem + &H72), New Byte() { &H98, CByte(align) })
+            Me.Console.WriteSByte((elem + &H70), CSByte(shader))
+            Me.Console.WriteInt32((elem + 20), BitConverter.ToInt32(New Byte() { CByte(r), CByte(g), CByte(b), CByte(a) }, 0))
+            Me.Console.WriteInt32((elem + &H7C), client)
+        End Sub
+
+        Private Sub SetMem(ByVal Data As Byte(), ByVal Offset As UInt32)
+            Me.Console.SetMemory(Offset, Data)
+        End Sub
+
+        Public Sub setText(ByVal client As Integer, ByVal elem As UInt32, ByVal [text] As UInt32, ByVal font As UInt32, ByVal fontScale As Single, ByVal x As Single, ByVal y As Single, ByVal align As UInt32, ByVal relative As UInt32, ByVal GlowR As Integer, ByVal GlowG As Integer, ByVal GlowB As Integer, ByVal GlowA As Integer)
+            Me.Console.WriteFloat((elem + 12), fontScale)
+            Me.Console.WriteFloat(elem, x)
+            Me.Console.WriteFloat((elem + 4), y)
+            Me.Console.WriteUInt32((elem + &H62), [text])
+            Me.Console.SetMemory((elem + &H72), New Byte() { CByte(relative), CByte(align) })
+            Me.Console.WriteSByte((elem + &H6C), 1)
+            Me.Console.SetMemory((elem + &H40), New Byte() { BitConverter.GetBytes(GlowR)(0), BitConverter.GetBytes(GlowG)(0), BitConverter.GetBytes(GlowB)(0), BitConverter.GetBytes(GlowA)(0) })
+            Me.Console.WriteInt32((elem + 20), BitConverter.ToInt32(New Byte() { &HFF, &HFF, &HFF, &HFF }, 0))
+            Me.Console.WriteInt32((elem + &H7C), client)
+        End Sub
+
+        Private Sub settingsToolStripMenuItem_Click(ByVal sender As Object, ByVal e As EventArgs)
+            MessageBox.Show("Not implemented yet.")
+        End Sub
+
+        Private Sub speedToolStripMenuItem_Click(ByVal sender As Object, ByVal e As EventArgs)
+            Me.Console.WriteFloat((Me.getPlayerState(Me.listBox1.SelectedIndex) + &H54E0), If((sender.ToString = "None"), CSng(0), If((sender.ToString = "Medium"), CSng(200), CSng(&H3E7))))
+            Me.Console.Call(&H8242D730, New Object() { 0, ("^Speed: ^7" & sender.ToString) })
+        End Sub
+
+        Public Sub TakeAmmo(ByVal Client As Integer)
+            Me.Console.SetMemory((Me.getPlayerState(Client) + &H43E), New Byte(2  - 1) {})
+            Me.Console.SetMemory((Me.getPlayerState(Client) + &H402), New Byte(2  - 1) {})
+            Me.Console.SetMemory((Me.getPlayerState(Client) + &H43A), New Byte(2  - 1) {})
+            Me.Console.SetMemory((Me.getPlayerState(Client) + &H3FE), New Byte(2  - 1) {})
+            Me.Console.SetMemory((Me.getPlayerState(Client) + &H412), New Byte(2  - 1) {})
+            Me.Console.SetMemory((Me.getPlayerState(Client) + &H446), New Byte(2  - 1) {})
+            Me.Console.SetMemory((Me.getPlayerState(Client) + &H442), New Byte(2  - 1) {})
+        End Sub
+
+        Private Sub textBox2_TextChanged(ByVal sender As Object, ByVal e As EventArgs)
+        End Sub
+
+        Private Sub textBox5_TextChanged(ByVal sender As Object, ByVal e As EventArgs)
+        End Sub
+
+        Private Sub textBox8_TextChanged(ByVal sender As Object, ByVal e As EventArgs)
+        End Sub
+
+        Public Sub TP_Elapsed(ByVal sender As Object, ByVal e As ElapsedEventArgs)
+            Dim i As Integer
+            For i = 0 To &H12 - 1
+                If (i <> Me.SelectedClient) Then
+                    Me.FreezePlayer(i)
+                    Me.Console.WriteFloat((Me.getPlayerState(i) + 40), CSng(Me.numericUpDown1.Value))
+                    Me.Console.WriteFloat((Me.getPlayerState(i) + &H2C), CSng(Me.numericUpDown2.Value))
+                    Me.Console.WriteFloat((Me.getPlayerState(i) + &H30), CSng(Me.numericUpDown3.Value))
+                End If
+            Next i
+        End Sub
+
+        Private Sub UFO_Elapsed(ByVal sender As Object, ByVal e As ElapsedEventArgs)
+        End Sub
+
+        Public Function uintBytes(ByVal input As UInt32) As Byte()
+            Dim bytes As Byte() = BitConverter.GetBytes(input)
+            Array.Reverse(bytes)
+            Return bytes
+        End Function
+
+
+        ' Fields
+        Private artOfWarToolStripMenuItem As ToolStripMenuItem
+        Private aTacsAUToolStripMenuItem As ToolStripMenuItem
+        Private [Auto] As Timer = New Timer
+        Private autoEditToolStripMenuItem As ToolStripMenuItem
+        Private bloodshotToolStripMenuItem As ToolStripMenuItem
+        Private blueTigerToolStripMenuItem As ToolStripMenuItem
+        Private button1 As Button
+        Private button10 As Button
+        Private button11 As Button
+        Private button12 As Button
+        Private button13 As Button
+        Private button14 As Button
+        Private button15 As Button
+        Private button16 As Button
+        Private button17 As Button
+        Private button18 As Button
+        Private button19 As Button
+        Private button2 As Button
+        Private button20 As Button
+        Private button21 As Button
+        Private button22 As Button
+        Private button23 As Button
+        Private button24 As Button
+        Private button25 As Button
+        Private button26 As Button
+        Private button27 As Button
+        Private button28 As Button
+        Private button29 As Button
+        Private button3 As Button
+        Private button30 As Button
+        Private button31 As Button
+        Private button32 As Button
+        Private button33 As Button
+        Private button34 As Button
+        Private button35 As Button
+        Private button36 As Button
+        Private button37 As Button
+        Private button38 As Button
+        Private button39 As Button
+        Private button4 As Button
+        Private button40 As Button
+        Private button41 As Button
+        Private button42 As Button
+        Private button43 As Button
+        Private button44 As Button
+        Private button45 As Button
+        Private button46 As Button
+        Private button47 As Button
+        Private button48 As Button
+        Private button49 As Button
+        Private button5 As Button
+        Private button50 As Button
+        Private button6 As Button
+        Private button7 As Button
+        Private button8 As Button
+        Private button9 As Button
+        Private camoToolStripMenuItem As ToolStripMenuItem
+        Private carbonFiberToolStripMenuItem As ToolStripMenuItem
+        Private Chached As Boolean
+        Private checkBox1 As CheckBox
+        Private checkBox2 As CheckBox
+        Private checkBox3 As CheckBox
+        Private cherryToolStripMenuItem As ToolStripMenuItem
+        Private chocoToolStripMenuItem As ToolStripMenuItem
+        Private Clantag As Timer = New Timer
+        Private comboBox1 As ComboBox
+        Private components As IContainer = Nothing
+        Private Console As XRPC = New XRPC
+        Private contextMenuStrip1 As ContextMenuStrip
+        Private devGruToolStripMenuItem As ToolStripMenuItem
+        Private devModeToolStripMenuItem As ToolStripMenuItem
+        Private diamondToolStripMenuItem As ToolStripMenuItem
+        Private digitalToolStripMenuItem As ToolStripMenuItem
+        Private disableWeaponsToolStripMenuItem As ToolStripMenuItem
+        Private DoHeart As Timer = New Timer
+        Private DoHearText As UInt32() = New UInt32(&H12  - 1) {}
+        Private DoText As UInt32
+        Private eliteToolStripMenuItem As ToolStripMenuItem
+        Private enableWeaponsToolStripMenuItem As ToolStripMenuItem
+        Private eRDLToolStripMenuItem As ToolStripMenuItem
+        Private exitToolStripMenuItem As ToolStripMenuItem
+        Private fontSize As Single = 1!
+        Private freezeToolStripMenuItem As ToolStripMenuItem
+        Private freezeWithLookToolStripMenuItem As ToolStripMenuItem
+        Private ghostexToolStripMenuItem As ToolStripMenuItem
+        Private goldToolStripMenuItem As ToolStripMenuItem
+        Private groupBox1 As GroupBox
+        Private groupBox10 As GroupBox
+        Private groupBox11 As GroupBox
+        Private groupBox12 As GroupBox
+        Private groupBox13 As GroupBox
+        Private groupBox14 As GroupBox
+        Private groupBox15 As GroupBox
+        Private groupBox16 As GroupBox
+        Private groupBox17 As GroupBox
+        Private groupBox2 As GroupBox
+        Private groupBox3 As GroupBox
+        Private groupBox4 As GroupBox
+        Private groupBox5 As GroupBox
+        Private groupBox6 As GroupBox
+        Private groupbox7 As GroupBox
+        Private groupBox8 As GroupBox
+        Private groupBox9 As GroupBox
+        Private HeartClient As Integer
+        Private highToolStripMenuItem As ToolStripMenuItem
+        Private infared As Boolean() = New Boolean(&H12  - 1) {}
+        Private item1ToolStripMenuItem As ToolStripMenuItem
+        Private jungleToolStripMenuItem As ToolStripMenuItem
+        Private kryptekToolStripMenuItem As ToolStripMenuItem
+        Private label1 As Label
+        Private label10 As Label
+        Private label11 As Label
+        Private label12 As Label
+        Private label13 As Label
+        Private label14 As Label
+        Private label15 As Label
+        Private label16 As Label
+        Private label17 As Label
+        Private label18 As Label
+        Private label2 As Label
+        Private label3 As Label
+        Private label4 As Label
+        Private label5 As Label
+        Private label6 As Label
+        Private label7 As Label
+        Private label8 As Label
+        Private label9 As Label
+        Private listBox1 As ListBox
+        Private listBox2 As ListBox
+        Private listBox3 As ListBox
+        Private listBox4 As ListBox
+        Private listBox5 As ListBox
+        Private listBox6 As ListBox
+        Private listBox7 As ListBox
+        Private listBox8 As ListBox
+        Private maxDeathsToolStripMenuItem As ToolStripMenuItem
+        Private maxKillsToolStripMenuItem As ToolStripMenuItem
+        Private maxScoreToolStripMenuItem As ToolStripMenuItem
+        Private mediumToolStripMenuItem As ToolStripMenuItem
+        Private menuStrip1 As MenuStrip
+        Private moneyToolStripMenuItem As ToolStripMenuItem
+        Private moveSpeedScaleToolStripMenuItem As ToolStripMenuItem
+        Private NewsBar As Timer = New Timer
+        Private NewsBarCached As Boolean = False
+        Private NewsbarShader As UInt32() = New UInt32(&H12  - 1) {}
+        Private NewsbarText As UInt32() = New UInt32(&H12  - 1) {}
+        Private NewsClient As Integer
+        Private NewsText As UInt32
+        Private noneToolStripMenuItem As ToolStripMenuItem
+        Private numericUpDown1 As NumericUpDown
+        Private numericUpDown10 As NumericUpDown
+        Private numericUpDown11 As NumericUpDown
+        Private numericUpDown12 As NumericUpDown
+        Private numericUpDown13 As NumericUpDown
+        Private numericUpDown2 As NumericUpDown
+        Private numericUpDown3 As NumericUpDown
+        Private numericUpDown4 As NumericUpDown
+        Private numericUpDown5 As NumericUpDown
+        Private numericUpDown6 As NumericUpDown
+        Private numericUpDown7 As NumericUpDown
+        Private numericUpDown8 As NumericUpDown
+        Private numericUpDown9 As NumericUpDown
+        Private offToolStripMenuItem As ToolStripMenuItem
+        Private offToolStripMenuItem1 As ToolStripMenuItem
+        Private onToolStripMenuItem As ToolStripMenuItem
+        Private onToolStripMenuItem1 As ToolStripMenuItem
+        Private richTextBox1 As RichTextBox
+        Private roninToolStripMenuItem As ToolStripMenuItem
+        Private scoreToolStripMenuItem As ToolStripMenuItem
+        Private SelectedClient As Integer
+        Private SelectedClient2 As Integer
+        Private settingsToolStripMenuItem As ToolStripMenuItem
+        Private siberiaToolStripMenuItem As ToolStripMenuItem
+        Private skullsToolStripMenuItem As ToolStripMenuItem
+        Private spreadOverrideToolStripMenuItem As ToolStripMenuItem
+        Private StealthMode As Boolean
+        Private stealthModeToolStripMenuItem As ToolStripMenuItem
+        Private tabControl1 As TabControl
+        Private tabPage1 As TabPage
+        Private tabPage2 As TabPage
+        Private tabPage3 As TabPage
+        Private tabPage4 As TabPage
+        Private tabPage5 As TabPage
+        Private tabPage6 As TabPage
+        Private tabPage7 As TabPage
+        Private textBox1 As TextBox
+        Private textBox10 As TextBox
+        Private textBox11 As TextBox
+        Private textBox2 As TextBox
+        Private textBox3 As TextBox
+        Private textBox4 As TextBox
+        Private textBox5 As TextBox
+        Private textBox6 As TextBox
+        Private textBox7 As TextBox
+        Private textBox8 As TextBox
+        Private textBox9 As TextBox
+        Private toolStripMenuItem1 As ToolStripMenuItem
+        Private toolStripMenuItem3 As ToolStripMenuItem
+        Private TP As Timer = New Timer
+        Private UFO As Timer = New Timer
+        Private versionToolStripMenuItem As ToolStripMenuItem
+        Private weapFlagsToolStripMenuItem As ToolStripMenuItem
+
+        ' Nested Types
+        Public Class HElems
+            ' Fields
+            Public Shared elem As UInt32 = &H82328E60
+            Public Shared locString As UInt32 = &H82387120
+            Public Shared material As UInt32 = &H82387340
+        End Class
+    End Class
+End Namespace
+
